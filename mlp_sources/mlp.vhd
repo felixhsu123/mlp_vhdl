@@ -80,8 +80,46 @@ architecture Behavioral of mlp is
     constant start_addr: addr_t := (0, 784, 814);
 begin
     --state register
-    process (clk, reset) is
-    begin
+--    process (clk, reset) is
+--    begin
+--        if (reset = '1') then
+--            state_reg <= idle;
+--            acc_reg <= (others => '0');
+--            acc_tmp_reg <= (others => '0');
+--            acc_tmp2_reg <= (others => '0');
+--            product_tmp_reg <= (others => '0');
+--            p_reg <= (others => '0');
+--            layer_reg <= (others => '0');
+--            neuron_reg <= (others => '0');
+--            i_reg <= (others => '0');
+--            j_reg <= (others => '0');
+--            sdata_reg <= (others => '0');
+--            res_reg <= (others => '0');
+--            max_reg <= (others => '0');
+--            currmax_reg <= (others => '0');
+
+--        elsif (clk'event and clk = '1') then
+--            state_reg <= state_next;
+--            acc_reg <= acc_next;
+--            acc_tmp_reg <= acc_tmp_next;
+--            acc_tmp2_reg <= acc_tmp2_next;
+--            product_tmp_reg <= product_tmp_next;
+--            p_reg <= p_next;
+--            layer_reg <= layer_next;
+--            neuron_reg <= neuron_next;
+--            i_reg <= i_next;
+--            j_reg <= j_next;
+--            sdata_reg <= sdata_next;
+--            res_reg <= res_next;
+--            max_reg <= max_next;
+--            currmax_reg <= currmax_next;
+--        end if;
+--    end process;
+      process (clk) is
+begin
+    
+
+    if (clk'event and clk = '1') then
         if (reset = '1') then
             state_reg <= idle;
             acc_reg <= (others => '0');
@@ -97,8 +135,7 @@ begin
             res_reg <= (others => '0');
             max_reg <= (others => '0');
             currmax_reg <= (others => '0');
-
-        elsif (clk'event and clk = '1') then
+        else
             state_reg <= state_next;
             acc_reg <= acc_next;
             acc_tmp_reg <= acc_tmp_next;
@@ -114,19 +151,23 @@ begin
             max_reg <= max_next;
             currmax_reg <= currmax_next;
         end if;
-    end process;
+    end if;
+end process;
     
     --next state comb logic
-    process(state_reg, start, sdata, svalid, bdata_in)
+    process(state_reg, res_reg, acc_reg, layer_reg, neuron_reg,p_next,  p_reg, i_reg, sdata_reg, j_reg, product_tmp_reg, acc_tmp_reg, 
+    acc_tmp2_reg, currmax_reg, max_reg,  product_tmp_next, i_next, acc_tmp_next, acc_tmp2_next, acc_next, neuron_next, layer_next,
+    currmax_next, j_next, start, sdata, svalid, bdata_in)
+    
     begin
-	res_next <= res_reg;
+--	res_next <= res_reg;
 	acc_next <= acc_reg;
-    p_next <= p_reg;
-    layer_next <= layer_reg;
-    neuron_next <= neuron_reg;
-    i_next <= i_reg;
-    state_next <= state_reg;
-    sdata_next <= sdata_reg;
+--    p_next <= p_reg;
+--    layer_next <= layer_reg;
+--    neuron_next <= neuron_reg;
+--    i_next <= i_reg;
+--    state_next <= state_reg;
+--    sdata_next <= sdata_reg;
     j_next <= j_reg;
     product_tmp_next <= product_tmp_reg;
     acc_tmp_next <= acc_tmp_reg;
@@ -264,8 +305,8 @@ begin
                   if (currmax_next > max_reg) then
                   	max_next <= currmax_next;
                   	res_next <= j_reg;
-                  	j_next <= std_logic_vector(unsigned(j_reg) + 1);
                   end if;
+                  j_next <= std_logic_vector(unsigned(j_reg) + 1);
                   if(j_next = "1010") then
                   	state_next <= end_state;
             	else
@@ -273,7 +314,8 @@ begin
              	end if;
        	when end_state =>
        		toggle <= '1';
-       		cl_num <= res_reg;
+       		--cl_num <= res_reg;
+       		cl_num <= std_logic_vector(unsigned(res_reg) + 1);
        		state_next <= idle;
                   --res_next <= (others=>'0');
                   --j_next <= std_logic_vector(1);

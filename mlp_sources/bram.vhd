@@ -36,45 +36,36 @@ use IEEE.NUMERIC_STD.ALL;
 entity bram is
     generic (WADDR: positive := 10;
     WDATA: positive := 16); 
-    Port ( clka, clkb, ena, enb, wea, web : in STD_LOGIC;
-            reset: in STD_LOGIC;
+    Port ( clk,  ena, enb, wea, web : in STD_LOGIC;
+           reset: in STD_LOGIC;
            addra, addrb: in STD_LOGIC_VECTOR(WADDR-1 downto 0);
            dia, dib: in STD_LOGIC_VECTOR(WDATA-1 downto 0);
            doa, dob: out STD_LOGIC_VECTOR(WDATA-1 downto 0));
 end bram;
 
 architecture Behavioral of bram is
-    type mem_array is array ((2** WADDR- 1) downto 0) of STD_LOGIC_VECTOR (WDATA-1 downto 0);
-    signal mem: mem_array;
+    type mem_t is array ((2** WADDR- 1) downto 0) of STD_LOGIC_VECTOR (WDATA-1 downto 0);
+    signal mem_s: mem_t;
 begin
 --Dual-Port logic port A
-    process (clka) begin
-        if clka'event and clka = '1' then
+    process (clk) begin
+        if clk'event and clk = '1' then
             if (reset = '1') then
-                mem <= (others => (others => '0'));
+                mem_s <= (others => (others => '0'));
             else
                 if ena = '1' then
                     if wea = '1' then
-                        mem (CONV_INTEGER (addra)) <= dia;
+                        mem_s (CONV_INTEGER (addra)) <= dia;
+                    else
+                       doa <= mem_s (CONV_INTEGER (addra));
                     end if;
-                else
-                    doa <= mem (CONV_INTEGER (addra));
                 end if;
-            end if;
-        end if;
-    end process;
---Dual-Port logic port B
-    process (clkb) begin
-        if clkb'event and clkb = '1' then
-            if (reset = '1') then
-                mem <= (others => (others => '0'));
-            else
                 if enb = '1' then
                     if web = '1' then
-                        mem (CONV_INTEGER (addrb)) <= dib;
+                        mem_s (CONV_INTEGER (addrb)) <= dib;
+                    else
+                        dob <= mem_s (CONV_INTEGER (addrb));
                     end if;
-                else
-                    dob <= mem (CONV_INTEGER (addrb));
                 end if;
             end if;
         end if;
