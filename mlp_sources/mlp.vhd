@@ -160,7 +160,7 @@ end process;
     currmax_next, j_next, start, sdata, svalid, bdata_in)
     
     begin
---	res_next <= res_reg;
+	res_next <= res_reg;
 	acc_next <= acc_reg;
 --    p_next <= p_reg;
 --    layer_next <= layer_reg;
@@ -315,7 +315,7 @@ end process;
        	when end_state =>
        		toggle <= '1';
        		--cl_num <= res_reg;
-       		cl_num <= std_logic_vector(unsigned(res_reg) + 1);
+       		cl_num <= std_logic_vector(unsigned(res_reg));
        		state_next <= idle;
                   --res_next <= (others=>'0');
                   --j_next <= std_logic_vector(1);

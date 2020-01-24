@@ -10,7 +10,7 @@ entity mlp_tb is
 end entity;
 
 architecture beh of mlp_tb is
-    file input_test_image : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params\input_image.txt";
+    file input_test_image : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params\input_images.txt";
     file input_weights_1 : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params\weights1.txt";
     file input_biases_1 : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params\biases1.txt";
     file input_weights_2 : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params\weights2.txt";
@@ -74,6 +74,7 @@ architecture beh of mlp_tb is
         stim_gen: process
             variable curr_value : line;
         begin
+        for k in 0 to 9 loop
             -- Apply system level reset
             reset_s <= '0';
             wait for 500 ns;
@@ -83,6 +84,8 @@ architecture beh of mlp_tb is
             wait until falling_edge(clk_s);
             -- Load the data into the matrix A memory
             start_s <= '1';
+            wait for 100 ns;
+            start_s <= '0';
             for i in 0 to 783 loop
                 wait until sready_s = '1';
                 readline(input_test_image,curr_value);
@@ -132,7 +135,9 @@ architecture beh of mlp_tb is
             end loop;
             
             svalid_s <= '0';
-            wait for 50 ms;
+            --wait for 50 ms;
+            wait until ready_s = '1';
+        end loop;
                         
 --            mem_a_addr_s <= conv_std_logic_vector(i*M_c+j, mem_a_addr_s'length);
 --            mem_a_data_in_s <= MEM_A_CONTENT_c(i*M_c+j);
