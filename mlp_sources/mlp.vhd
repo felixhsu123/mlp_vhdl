@@ -33,7 +33,8 @@ use ieee.numeric_std.all;
 --use UNISIM.VComponents.all;
 
 entity mlp is
-    generic (WIDTH: positive := 16;
+    generic (WIDTH: positive := 18; -- 4 + 14
+    ACC_WIDTH: positive := 28; -- 14 + 14
     IMG_LEN: positive := 784;
     LAYER_NUM: positive := 3); 
     Port ( clk : in STD_LOGIC;
@@ -57,12 +58,12 @@ end mlp;
 
 architecture Behavioral of mlp is
     type state_type is (idle, start_state, wait_pixel, load_pixel, layer_state, wait_weight, load_weight,
-    wait_bias, load_bias, neuron_state, synapse_state, cont, find_res, end_state);
+    wait_bias, load_bias, neuron_state, synapse_state, cont, cont1, find_res, find_res_1, end_state);
     signal state_reg, state_next: state_type;
-    signal acc_reg, acc_next: STD_LOGIC_VECTOR(27 downto 0);
-    signal acc_tmp_reg, acc_tmp_next: STD_LOGIC_VECTOR(27 downto 0);
-    signal acc_tmp2_reg, acc_tmp2_next: STD_LOGIC_VECTOR(43 downto 0);
-    signal product_tmp_reg, product_tmp_next: STD_LOGIC_VECTOR(31 downto 0);
+    signal acc_reg, acc_next: STD_LOGIC_VECTOR(ACC_WIDTH - 1 downto 0);
+    signal acc_tmp_reg, acc_tmp_next: STD_LOGIC_VECTOR(ACC_WIDTH - 1 downto 0);
+    signal acc_tmp2_reg, acc_tmp2_next: STD_LOGIC_VECTOR(43 downto 0); -- 28 + 16 (PARAM) - 1
+    signal product_tmp_reg, product_tmp_next: STD_LOGIC_VECTOR(2*WIDTH - 1 downto 0);
     signal p_reg, p_next: STD_LOGIC_VECTOR(9 downto 0); --max 784
     signal layer_reg, layer_next: STD_LOGIC_VECTOR(1 downto 0); --max 2
     signal neuron_reg, neuron_next: STD_LOGIC_VECTOR(4 downto 0); --max 30
@@ -72,7 +73,7 @@ architecture Behavioral of mlp is
     signal res_reg, res_next: STD_LOGIC_VECTOR(3 downto 0); 
     signal max_reg, max_next: STD_LOGIC_VECTOR(WIDTH-1 downto 0);
     signal currmax_reg, currmax_next: STD_LOGIC_VECTOR(WIDTH-1 downto 0);
-    constant param: std_logic_vector(15 downto 0):= (x"0004"); --leakyReLu parameter
+    constant param: std_logic_vector(15 downto 0):= (x"0004"); --leakyReLu parameter 4 + 12
     type mem_t is array(0 to 2) of positive;--std_logic_vector(DATA_WIDTH_c - 1 downto 0);
     constant neuron_array: mem_t := (784, 30, 10);--(conv_std_logic_vector(1, DATA_WIDTH_c),conv_std_logic_vector(2, DATA_WIDTH_c),conv_std_logic_vector(3, DATA_WIDTH_c));
     subtype addr_range_t is integer range 0 to 900;
@@ -80,45 +81,8 @@ architecture Behavioral of mlp is
     constant start_addr: addr_t := (0, 784, 814);
 begin
     --state register
---    process (clk, reset) is
---    begin
---        if (reset = '1') then
---            state_reg <= idle;
---            acc_reg <= (others => '0');
---            acc_tmp_reg <= (others => '0');
---            acc_tmp2_reg <= (others => '0');
---            product_tmp_reg <= (others => '0');
---            p_reg <= (others => '0');
---            layer_reg <= (others => '0');
---            neuron_reg <= (others => '0');
---            i_reg <= (others => '0');
---            j_reg <= (others => '0');
---            sdata_reg <= (others => '0');
---            res_reg <= (others => '0');
---            max_reg <= (others => '0');
---            currmax_reg <= (others => '0');
-
---        elsif (clk'event and clk = '1') then
---            state_reg <= state_next;
---            acc_reg <= acc_next;
---            acc_tmp_reg <= acc_tmp_next;
---            acc_tmp2_reg <= acc_tmp2_next;
---            product_tmp_reg <= product_tmp_next;
---            p_reg <= p_next;
---            layer_reg <= layer_next;
---            neuron_reg <= neuron_next;
---            i_reg <= i_next;
---            j_reg <= j_next;
---            sdata_reg <= sdata_next;
---            res_reg <= res_next;
---            max_reg <= max_next;
---            currmax_reg <= currmax_next;
---        end if;
---    end process;
-      process (clk) is
-begin
-    
-
+    process (clk) is
+    begin
     if (clk'event and clk = '1') then
         if (reset = '1') then
             state_reg <= idle;
@@ -232,7 +196,6 @@ end process;
                     sready <= '1';
                     if svalid = '1' then 
                         state_next <= load_weight;
-                        --baddr <= i_reg; --will have to change later
                         baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_reg)); --get this under control
                         en<='1';
                         we<='0';
@@ -242,7 +205,8 @@ end process;
                     end if;
             when load_weight =>
                     product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata_reg)); --gr8
-                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(27 downto 12))); --
+                    --acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(27 downto 12))); --
+                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(31 downto 14))); -- parametrize widths
                     toggle <= '0';
                     i_next <= std_logic_vector(unsigned(i_reg) + 1);
                     if unsigned(i_next) < neuron_array(to_integer(unsigned(layer_reg)) - 1)
@@ -266,14 +230,19 @@ end process;
                     toggle <= '0';
                     acc_tmp_next <= std_logic_vector(signed(acc_reg) + signed(sdata_reg));
                     --if signed(acc_tmp) < 0 then acc_next <= acc_tmp * 0.001;
-                    if acc_tmp_next(acc_tmp_next'left) = '1' then 
+                    --if acc_tmp_next(acc_tmp_next'left) = '1' then
+                    if signed(acc_tmp_next) < 0 then 
                         acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * signed(param));
+                       -- acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * 0.001);
+                        acc_next <= acc_tmp2_next(39 downto 12);
+                    else
+                        acc_next <= acc_tmp_next;
                     end if;
-                    acc_next <= acc_tmp2_next(39 downto 12);
+                    
                     --write result in bram
                     --baddr <= "00000"&std_logic_vector(start_addr(to_integer(unsigned(layer_reg))) + unsigned(neuron_reg)); --concatenation possible problem
                     baddr <= std_logic_vector(to_unsigned(start_addr(to_integer(unsigned(layer_reg))) + to_integer(unsigned(neuron_reg)), baddr'length));
-                    bdata_out <= acc_next(17 downto 2);
+                    bdata_out <= acc_next(WIDTH - 1 downto 0);
                     en <= '1';
                     we <= '1';
                     neuron_next <= std_logic_vector(unsigned(neuron_reg) + 1);
@@ -290,23 +259,27 @@ end process;
                         baddr <= std_logic_vector(to_unsigned(start_addr(LAYER_NUM - 1), 10));
                         en <= '1';
                         we <= '0';
-                        max_next <= bdata_in;
-                        res_next <= (others=>'0');
-                        j_next <= "0001";
-                        state_next <= find_res;
+                        state_next <= cont1;
                     end if;
+            when cont1 =>
+                    max_next <= bdata_in;
+                    res_next <= (others=>'0');
+                    j_next <= "0001";
+                    state_next <= find_res;
             when find_res =>
                    --read from bram
                   --baddr <= "000000"&std_logic_vector(unsigned(j_reg) + start_addr( LAYER_NUM - 1)); --concatenation possible problem
                   baddr <= std_logic_vector(to_unsigned(start_addr(LAYER_NUM - 1) + to_integer(unsigned(j_reg)), baddr'length));
                   en <= '1';
                   we <= '0';
+                  state_next <= find_res_1;
+          when find_res_1 =>
                   currmax_next <= bdata_in;
-                  if (currmax_next > max_reg) then
+                  if (signed(currmax_next) > signed(max_reg)) then
                   	max_next <= currmax_next;
                   	res_next <= j_reg;
                   end if;
-                  j_next <= std_logic_vector(unsigned(j_reg) + 1);
+                  j_next <= std_logic_vector(unsigned(j_reg)+1);
                   if(j_next = "1010") then
                   	state_next <= end_state;
             	else

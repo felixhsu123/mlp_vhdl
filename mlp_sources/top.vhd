@@ -4,7 +4,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 entity top is
-generic (WIDTH: positive := 16); 
+generic (WIDTH: positive := 18); 
     Port ( clk : in STD_LOGIC;
            reset : in STD_LOGIC;
            --status
@@ -20,8 +20,8 @@ end top;
 
 architecture Behavioral of top is
          signal mem_a_addr_s: std_logic_vector(9 downto 0);
-         signal mem_a_data_in_s: std_logic_vector(15 downto 0);
-         signal mem_a_data_out_s: std_logic_vector(15 downto 0);
+         signal mem_a_data_in_s: std_logic_vector(WIDTH - 1 downto 0);
+         signal mem_a_data_out_s: std_logic_vector(WIDTH - 1 downto 0);
          signal mem_a_wr_s: std_logic;
          signal mem_a_en_s: std_logic;
 begin

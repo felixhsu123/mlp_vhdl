@@ -35,7 +35,7 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity bram is
     generic (WADDR: positive := 10;
-    WDATA: positive := 16); 
+    WDATA: positive := 18); 
     Port ( clk,  ena, enb, wea, web : in STD_LOGIC;
            reset: in STD_LOGIC;
            addra, addrb: in STD_LOGIC_VECTOR(WADDR-1 downto 0);
