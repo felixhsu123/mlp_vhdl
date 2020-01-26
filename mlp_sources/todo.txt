@@ -1,0 +1,3 @@
+parametrize lines 211 and 238
+line 292 to be deleted, line 291 uncommented
+make code cleaner
