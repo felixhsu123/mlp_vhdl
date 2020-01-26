@@ -127,12 +127,12 @@ end process;
     begin
 	res_next <= res_reg;
 	acc_next <= acc_reg;
---    p_next <= p_reg;
---    layer_next <= layer_reg;
---    neuron_next <= neuron_reg;
---    i_next <= i_reg;
---    state_next <= state_reg;
---    sdata_next <= sdata_reg;
+    p_next <= p_reg;
+    layer_next <= layer_reg;
+    neuron_next <= neuron_reg;
+    i_next <= i_reg;
+    state_next <= state_reg;
+    sdata_next <= sdata_reg;
     j_next <= j_reg;
     product_tmp_next <= product_tmp_reg;
     acc_tmp_next <= acc_tmp_reg;
