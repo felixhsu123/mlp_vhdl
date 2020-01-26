@@ -100,12 +100,14 @@ architecture beh of mlp_tb is
                 svalid_s <= '1';
                 wait for 250 ns;
                 svalid_s <= '0';
+                wait for 130ns;
             end loop;
             
             --wait until toggle = '1'
             for j in 0 to 29 loop
                 for i in 0 to 783 loop
-                    wait until sready_s = '1';
+                    --wait until sready_s = '1';
+                    wait until rising_edge(sready_s);
                     readline(input_weights_1,curr_value);
                     sdata_s <= to_std_logic_vector(string(curr_value));
                     svalid_s <= '1';
@@ -149,6 +151,7 @@ architecture beh of mlp_tb is
             file_close(input_biases_2);
             wait until rising_edge(ready_s);
         end loop;
+        wait;
                         
 --            mem_a_addr_s <= conv_std_logic_vector(i*M_c+j, mem_a_addr_s'length);
 --            mem_a_data_in_s <= MEM_A_CONTENT_c(i*M_c+j);

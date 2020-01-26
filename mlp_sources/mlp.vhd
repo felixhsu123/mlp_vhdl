@@ -33,8 +33,9 @@ use ieee.numeric_std.all;
 --use UNISIM.VComponents.all;
 
 entity mlp is
-    generic (WIDTH: positive := 18; -- 4 + 14
-    ACC_WIDTH: positive := 28; -- 14 + 14
+    generic (WDATA: positive := 18; -- 4 + 14
+    WADDR: positive := 10;
+    ACC_WDATA: positive := 28; -- 14 + 14
     IMG_LEN: positive := 784;
     LAYER_NUM: positive := 3); 
     Port ( clk : in STD_LOGIC;
@@ -45,13 +46,13 @@ entity mlp is
            toggle: out STD_LOGIC;
            cl_num: out STD_LOGIC_VECTOR(3 downto 0);
            --stream interface aka fifo interface
-           sdata: in STD_LOGIC_VECTOR(WIDTH-1 downto 0);
+           sdata: in STD_LOGIC_VECTOR(WDATA-1 downto 0);
            svalid: in STD_LOGIC;
            sready: out STD_LOGIC;
            --bram interface
-           bdata_in: in STD_LOGIC_VECTOR(WIDTH-1 downto 0);
-           bdata_out: out STD_LOGIC_VECTOR(WIDTH-1 downto 0);
-           baddr: out STD_LOGIC_VECTOR(9 downto 0);
+           bdata_in: in STD_LOGIC_VECTOR(WDATA-1 downto 0);
+           bdata_out: out STD_LOGIC_VECTOR(WDATA-1 downto 0);
+           baddr: out STD_LOGIC_VECTOR(WADDR-1 downto 0);
            en: out STD_LOGIC;
            we: out STD_LOGIC);
 end mlp;
@@ -60,24 +61,24 @@ architecture Behavioral of mlp is
     type state_type is (idle, start_state, wait_pixel, load_pixel, layer_state, wait_weight, load_weight,
     wait_bias, load_bias, neuron_state, synapse_state, cont, cont1, find_res, find_res_1, end_state);
     signal state_reg, state_next: state_type;
-    signal acc_reg, acc_next: STD_LOGIC_VECTOR(ACC_WIDTH - 1 downto 0);
-    signal acc_tmp_reg, acc_tmp_next: STD_LOGIC_VECTOR(ACC_WIDTH - 1 downto 0);
-    signal acc_tmp2_reg, acc_tmp2_next: STD_LOGIC_VECTOR(43 downto 0); -- 28 + 16 (PARAM) - 1
-    signal product_tmp_reg, product_tmp_next: STD_LOGIC_VECTOR(2*WIDTH - 1 downto 0);
+    signal acc_reg, acc_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
+    signal acc_tmp_reg, acc_tmp_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
+    signal acc_tmp2_reg, acc_tmp2_next: STD_LOGIC_VECTOR(ACC_WDATA + 16 - 1 downto 0); 
+    signal product_tmp_reg, product_tmp_next: STD_LOGIC_VECTOR(2*WDATA - 1 downto 0);
     signal p_reg, p_next: STD_LOGIC_VECTOR(9 downto 0); --max 784
     signal layer_reg, layer_next: STD_LOGIC_VECTOR(1 downto 0); --max 2
     signal neuron_reg, neuron_next: STD_LOGIC_VECTOR(4 downto 0); --max 30
     signal i_reg, i_next: STD_LOGIC_VECTOR(9 downto 0); --max 784
     signal j_reg, j_next: STD_LOGIC_VECTOR(3 downto 0); --max 10
-    signal sdata_reg, sdata_next: STD_LOGIC_VECTOR(WIDTH-1 downto 0);
+    signal sdata_reg, sdata_next: STD_LOGIC_VECTOR(WDATA-1 downto 0);
     signal res_reg, res_next: STD_LOGIC_VECTOR(3 downto 0); 
-    signal max_reg, max_next: STD_LOGIC_VECTOR(WIDTH-1 downto 0);
-    signal currmax_reg, currmax_next: STD_LOGIC_VECTOR(WIDTH-1 downto 0);
-    constant param: std_logic_vector(15 downto 0):= (x"0004"); --leakyReLu parameter 4 + 12
-    type mem_t is array(0 to 2) of positive;--std_logic_vector(DATA_WIDTH_c - 1 downto 0);
-    constant neuron_array: mem_t := (784, 30, 10);--(conv_std_logic_vector(1, DATA_WIDTH_c),conv_std_logic_vector(2, DATA_WIDTH_c),conv_std_logic_vector(3, DATA_WIDTH_c));
+    signal max_reg, max_next: STD_LOGIC_VECTOR(WDATA-1 downto 0);
+    signal currmax_reg, currmax_next: STD_LOGIC_VECTOR(WDATA-1 downto 0);
+    constant param: STD_LOGIC_VECTOR(15 downto 0):= (x"0004"); --leakyReLu parameter 4 + 12
+    type mem_t is array(0 to 2) of positive;--std_logic_vector(DATA_WDATA_c - 1 downto 0);
+    constant neuron_array: mem_t := (784, 30, 10);--(conv_std_logic_vector(1, DATA_WDATA_c),conv_std_logic_vector(2, DATA_WDATA_c),conv_std_logic_vector(3, DATA_WDATA_c));
     subtype addr_range_t is integer range 0 to 900;
-    type addr_t is array(0 to 2) of addr_range_t;--std_logic_vector(DATA_WIDTH_c - 1 downto 0);
+    type addr_t is array(0 to 2) of addr_range_t;--std_logic_vector(DATA_WDATA_c - 1 downto 0);
     constant start_addr: addr_t := (0, 784, 814);
 begin
     --state register
@@ -174,7 +175,6 @@ end process;
                     bdata_out <= sdata;
                     en <= '1';
                     we <= '1';
-                    toggle <= '0';
                     p_next <= std_logic_vector( unsigned(p_reg) + 1 );
                     if unsigned(p_next) < IMG_LEN then
                         state_next <= wait_pixel;
@@ -183,14 +183,16 @@ end process;
                         state_next <= layer_state;
                     end if;
             when layer_state =>
+                    toggle <= '1';
                     neuron_next <= (others => '0');
                     state_next <= neuron_state;
             when neuron_state =>
+                    --toggle <= '1'; --subject to change
                     acc_next <= (others => '0');
                     i_next <= (others => '0');
                     state_next <= synapse_state;
             when synapse_state =>
-                    toggle <= '1';
+                    --toggle <= '1'; --moved to neuron_state
                     state_next <= wait_weight;       
             when wait_weight =>
                     sready <= '1';
@@ -206,14 +208,14 @@ end process;
             when load_weight =>
                     product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata_reg)); --gr8
                     --acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(27 downto 12))); --
-                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(31 downto 14))); -- parametrize widths
-                    toggle <= '0';
+                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(31 downto 14))); -- parametrize WDATAs
                     i_next <= std_logic_vector(unsigned(i_reg) + 1);
                     if unsigned(i_next) < neuron_array(to_integer(unsigned(layer_reg)) - 1)
                     then 
-                        state_next <= synapse_state;
+                        --state_next <= synapse_state;
+                        state_next <= wait_weight;
                     else 
-                        toggle <= '1'; 
+                        --toggle <= '1'; 
                         state_next <= wait_bias;
                     end if;
             when wait_bias =>
@@ -227,7 +229,6 @@ end process;
                         state_next <= wait_bias;
                     end if;
             when load_bias =>
-                    toggle <= '0';
                     acc_tmp_next <= std_logic_vector(signed(acc_reg) + signed(sdata_reg));
                     --if signed(acc_tmp) < 0 then acc_next <= acc_tmp * 0.001;
                     --if acc_tmp_next(acc_tmp_next'left) = '1' then
@@ -242,7 +243,7 @@ end process;
                     --write result in bram
                     --baddr <= "00000"&std_logic_vector(start_addr(to_integer(unsigned(layer_reg))) + unsigned(neuron_reg)); --concatenation possible problem
                     baddr <= std_logic_vector(to_unsigned(start_addr(to_integer(unsigned(layer_reg))) + to_integer(unsigned(neuron_reg)), baddr'length));
-                    bdata_out <= acc_next(WIDTH - 1 downto 0);
+                    bdata_out <= acc_next(WDATA - 1 downto 0);
                     en <= '1';
                     we <= '1';
                     neuron_next <= std_logic_vector(unsigned(neuron_reg) + 1);
@@ -290,6 +291,8 @@ end process;
        		--cl_num <= res_reg;
        		cl_num <= std_logic_vector(unsigned(res_reg));
        		state_next <= idle;
+       		--new signal
+       		--done <= '1';
                   --res_next <= (others=>'0');
                   --j_next <= std_logic_vector(1);
                   --state_next <= find_res;
