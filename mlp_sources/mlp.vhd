@@ -139,7 +139,7 @@ end process;
     acc_tmp2_next <= acc_tmp2_reg;
     currmax_next <= currmax_reg;
     max_next <= max_reg;
-    cl_num <= "0000";
+    --cl_num <= "0000";
     
       baddr <= (others => '0');
       bdata_out <= (others => '0');
@@ -150,8 +150,10 @@ end process;
       sready <= '0';
         case state_reg is
             when idle =>
-                res_next <= (others => '0');
+                --res_next <= (others => '0'); --was commented so that cl_num output would stay the same until the next number is classified
                 acc_next <= (others => '0');
+                acc_tmp_next <= (others => '0');
+                acc_tmp2_next <= (others => '0');
                 p_next <= (others => '0');
                 layer_next <= (others => '0');
                 neuron_next <= (others => '0');
@@ -189,6 +191,8 @@ end process;
             when neuron_state =>
                     --toggle <= '1'; --subject to change
                     acc_next <= (others => '0');
+                    acc_tmp_next <= (others => '0');
+                    acc_tmp2_next <= (others => '0');
                     i_next <= (others => '0');
                     state_next <= synapse_state;
             when synapse_state =>
@@ -288,9 +292,11 @@ end process;
              	  end if;
             when end_state =>
                     toggle <= '1';
-                    cl_num <= res_reg;
+                    --cl_num <= res_reg;
                     state_next <= idle;
         end case;
+        
+        cl_num <= res_reg;
             
     end process;
 
