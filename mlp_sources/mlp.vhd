@@ -206,9 +206,9 @@ end process;
                         state_next <= wait_weight;
                     end if;
             when load_weight =>
-                    product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata_reg)); --gr8
-                    --acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(27 downto 12))); --
-                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(31 downto 14))); -- parametrize WDATAs
+                    product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata_reg));
+                    --acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(31 downto 14))); -- parametrize WDATAs
+                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(WDATA + ACC_WDATA/2 - 1 downto ACC_WDATA/2)));                    
                     i_next <= std_logic_vector(unsigned(i_reg) + 1);
                     if unsigned(i_next) < neuron_array(to_integer(unsigned(layer_reg)) - 1)
                     then 
@@ -235,7 +235,7 @@ end process;
                     if signed(acc_tmp_next) < 0 then 
                         acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * signed(param));
                        -- acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * 0.001);
-                        acc_next <= acc_tmp2_next(39 downto 12);
+                        acc_next <= acc_tmp2_next( ACC_WDATA + 12 - 1 downto 12);
                     else
                         acc_next <= acc_tmp_next;
                     end if;
@@ -274,28 +274,22 @@ end process;
                   en <= '1';
                   we <= '0';
                   state_next <= find_res_1;
-          when find_res_1 =>
+            when find_res_1 =>
                   currmax_next <= bdata_in;
                   if (signed(currmax_next) > signed(max_reg)) then
-                  	max_next <= currmax_next;
-                  	res_next <= j_reg;
+                    max_next <= currmax_next;
+                    res_next <= j_reg;
                   end if;
                   j_next <= std_logic_vector(unsigned(j_reg)+1);
                   if(j_next = "1010") then
-                  	state_next <= end_state;
-            	else
-                  	state_next <= find_res;
-             	end if;
-       	when end_state =>
-       		toggle <= '1';
-       		--cl_num <= res_reg;
-       		cl_num <= std_logic_vector(unsigned(res_reg));
-       		state_next <= idle;
-       		--new signal
-       		--done <= '1';
-                  --res_next <= (others=>'0');
-                  --j_next <= std_logic_vector(1);
-                  --state_next <= find_res;
+                    state_next <= end_state;
+                  else
+                    state_next <= find_res;
+             	  end if;
+            when end_state =>
+                    toggle <= '1';
+                    cl_num <= res_reg;
+                    state_next <= idle;
         end case;
             
     end process;
