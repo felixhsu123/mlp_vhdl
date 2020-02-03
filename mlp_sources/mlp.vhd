@@ -292,11 +292,11 @@ end process;
              	  end if;
             when end_state =>
                     toggle <= '1';
-                    --cl_num <= res_reg;
+                    cl_num <= res_reg;
                     state_next <= idle;
         end case;
         
-        cl_num <= res_reg;
+        --cl_num <= res_reg;
             
     end process;
 
