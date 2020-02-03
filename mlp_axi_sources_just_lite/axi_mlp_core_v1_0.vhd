@@ -51,7 +51,9 @@ entity axi_mlp_core_v1_0 is
 end axi_mlp_core_v1_0;
 
 architecture arch_imp of axi_mlp_core_v1_0 is
+     signal reset_s : std_logic;
     --**AXI LITE <-> MEM SUBS
+    signal reg_data_s: std_logic_vector(WDATA-1 downto 0);
     signal start_al2mm: std_logic;
     signal start_mm2al: std_logic;
     signal ready_mm2al: std_logic;
@@ -60,7 +62,7 @@ architecture arch_imp of axi_mlp_core_v1_0 is
     signal sready_mm2al: std_logic;
     signal svalid_al2mm: std_logic;
     signal svalid_mm2al: std_logic;
-    signal sdata_al2mm: std_logic_vector(WDATA-1 downto 0);
+    signal sdata_al2mm: std_logic;
     signal sdata_mm2al: std_logic_vector(WDATA-1 downto 0);
     --**MEMSUBS <-> MLP
     signal start_mm2mlp: std_logic;
@@ -124,16 +126,17 @@ axi_mlp_core_v1_0_S00_AXI_inst : entity work.axi_mlp_core_v1_0_S00_AXI(arch_imp)
 	)
 	port map (
 		   --user added ports
-        S_AXI_START_O => start_al2mm,
+		REG_DATA_O => reg_data_s,
+        S_WR_START_O => start_al2mm,
         S_AXI_START_I => start_mm2al,
         S_AXI_READY_I => ready_mm2al,
         S_AXI_TOGGLE_I => toggle_mm2al,
         S_AXI_CL_NUM_I => cl_num_mm2al,
         S_AXI_SREADY_I => sready_mm2al,
         S_AXI_SVALID_I => svalid_mm2al,
-        S_AXI_SVALID_O => svalid_al2mm,
+        S_WR_SVALID_O => svalid_al2mm,
         S_AXI_SDATA_I => sdata_mm2al,
-        S_AXI_SDATA_O => sdata_al2mm,
+        S_WR_SDATA_O => sdata_al2mm,
         --user added ports end here
 		S_AXI_ACLK	=> s00_axi_aclk,
 		S_AXI_ARESETN	=> s00_axi_aresetn,
@@ -197,24 +200,29 @@ axi_mlp_core_v1_0_S00_AXI_inst : entity work.axi_mlp_core_v1_0_S00_AXI(arch_imp)
             clk => s00_axi_aclk,
             --reset => s00_axi_aresetn,
             reset => reset_s,
-            start_axi_i => start_al2mm,
+            reg_data_i => reg_data_s,
+            --start
+            start_wr_i => start_al2mm,
             start_axi_o => start_mm2al,
             start_mlp_o => start_mm2mlp,
+            --ready
             ready_axi_o => ready_mm2al,
             ready_mlp_i => ready_mlp2mm,
+            --toggle
             toggle_axi_o => toggle_mm2al,
             toggle_mlp_i => toggle_mlp2mm, 
+            --cl_num
             cl_num_axi_o => cl_num_mm2al,
             cl_num_mlp_i => cl_num_mlp2mm,
             --sready
             sready_mlp_i => sready_mlp2mm,
             sready_axi_o => sready_mm2al,
             --svalid
-            svalid_axi_i => svalid_al2mm,
+            svalid_wr_i => svalid_al2mm,
             svalid_axi_o => svalid_mm2al,
             svalid_mlp_o => svalid_mm2mlp,
             --sdata
-            sdata_axi_i => sdata_al2mm,
+            sdata_wr_i => sdata_al2mm,
             sdata_axi_o => sdata_mm2al,
             sdata_mlp_o => sdata_mml2mlp
         );

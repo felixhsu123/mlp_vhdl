@@ -36,9 +36,9 @@ entity mem_subsystem is
     Port ( clk : in STD_LOGIC;
            reset : in STD_LOGIC;
            -- Interface to the AXI controllers
-            --reg_data_i : in std_logic_vector(log2c(SIZE)-1 downto 0);
+            reg_data_i : in std_logic_vector(WDATA-1 downto 0);
             --start
-            start_axi_i : in STD_LOGIC;
+            start_wr_i : in STD_LOGIC;
             start_axi_o : out STD_LOGIC;
             start_mlp_o : out STD_LOGIC;
             --ready
@@ -54,11 +54,11 @@ entity mem_subsystem is
             sready_mlp_i : in STD_LOGIC;
             sready_axi_o : out STD_LOGIC;
             --svalid
-            svalid_axi_i : in STD_LOGIC;
+            svalid_wr_i : in STD_LOGIC;
             svalid_axi_o : out STD_LOGIC;
             svalid_mlp_o : out STD_LOGIC;
             --sdata
-            sdata_axi_i : in STD_LOGIC_VECTOR(WDATA-1 downto 0);
+            sdata_wr_i : in STD_LOGIC;
             sdata_axi_o : out STD_LOGIC_VECTOR(WDATA-1 downto 0);
             sdata_mlp_o : out STD_LOGIC_VECTOR(WDATA-1 downto 0));
 end mem_subsystem;
@@ -86,8 +86,8 @@ begin
         if clk'event and clk='1' then
             if reset = '1' then
                 start_s <= '0';
-            else
-                start_s <= start_axi_i;
+            elsif start_wr_i = '1' then
+                start_s <= reg_data_i(0);
             end if;
         end if;
     end process;
@@ -146,8 +146,8 @@ begin
         if clk'event and clk='1' then
             if reset = '1' then
                 svalid_s <= '0';
-            else
-                svalid_s <= svalid_axi_i;
+            elsif svalid_wr_i = '1' then
+                svalid_s <= reg_data_i(0);
             end if;
         end if;
     end process;
@@ -158,8 +158,8 @@ begin
         if clk'event and clk='1' then
             if reset = '1' then
                 sdata_s <= (others => '0');
-            else
-                sdata_s <= sdata_axi_i;
+            elsif sdata_wr_i = '1' then
+                sdata_s <= reg_data_i(WDATA-1 downto 0);
             end if;
         end if;
     end process;

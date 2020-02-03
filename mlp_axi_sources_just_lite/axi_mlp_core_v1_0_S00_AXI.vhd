@@ -21,16 +21,17 @@ entity axi_mlp_core_v1_0_S00_AXI is
 	);
 	port (
 		-- Users to add ports here
+		REG_DATA_O: out STD_LOGIC_VECTOR(WDATA-1 downto 0);
         S_AXI_START_I : in STD_LOGIC;
-        S_AXI_START_O : out STD_LOGIC;
+        S_WR_START_O : out STD_LOGIC;
         S_AXI_READY_I : in STD_LOGIC;
         S_AXI_TOGGLE_I : in STD_LOGIC;
         S_AXI_CL_NUM_I : in STD_LOGIC_VECTOR(3 downto 0);
         S_AXI_SREADY_I : in STD_LOGIC;
         S_AXI_SVALID_I : in STD_LOGIC;
-        S_AXI_SVALID_O : out STD_LOGIC;
+        S_WR_SVALID_O : out STD_LOGIC;
         S_AXI_SDATA_I : in STD_LOGIC_VECTOR(WDATA-1 downto 0);
-        S_AXI_SDATA_O : out STD_LOGIC_VECTOR(WDATA-1 downto 0);
+        S_WR_SDATA_O : out STD_LOGIC;
 		-- User ports ends
 		-- Do not modify the ports beyond this line
 
@@ -228,27 +229,30 @@ begin
 	begin
 	  if rising_edge(S_AXI_ACLK) then 
 	    if S_AXI_ARESETN = '0' then
-	      start_s <= '0';
-	      svalid_s <= '0';
-	      sdata_s <= (others => '0');
+	      S_WR_START_O <= '0';
+	      S_WR_SVALID_O <= '0';
+	      S_WR_SDATA_O <= '0';
 	    else
 	      -- default assignments
-	      start_s <= '0';
-          svalid_s <= '0';
-          sdata_s <= (others => '0');
+	      S_WR_START_O <= '0';
+          S_WR_SVALID_O <= '0';
+          S_WR_SDATA_O <= '0';
 	      loc_addr := axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
 	      if (slv_reg_wren = '1') then
 	        case loc_addr is
 	          when b"000" =>
-	            start_s <= S_AXI_WDATA(0);
+	            --start_s <= S_AXI_WDATA(0);
+	            S_WR_START_O <= '1';
 	          when b"001" =>
 	          when b"010" =>
 	          when b"011" =>
 	          when b"100" =>
 	          when b"101" =>
-	            svalid_s <= S_AXI_WDATA(0);
+	            --svalid_s <= S_AXI_WDATA(0);
+	            S_WR_SVALID_O <= '1';
 	          when b"110" =>
-	            sdata_s <= S_AXI_WDATA(WDATA-1 downto 0);
+	            --sdata_s <= S_AXI_WDATA(WDATA-1 downto 0);
+	            S_WR_SDATA_O <= '1';
 	          when others =>
 	        end case;
 	      end if;
@@ -382,9 +386,12 @@ begin
 
 
 	-- Add user logic here
-    S_AXI_START_O <= start_s;
-    S_AXI_SVALID_O <= svalid_s;
-    S_AXI_SDATA_O <= sdata_s;
+    process (S_AXI_ACLK)
+    begin
+        if (S_AXI_ACLK'event and S_AXI_ACLK = '1') then
+            reg_data_o <= S_AXI_WDATA( WDATA-1 downto 0);
+        end if;
+    end process;
 	-- User logic ends
 
 end arch_imp;
