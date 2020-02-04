@@ -1,2 +1,0 @@
-around line 177 add "sdata_next<=sdata;" in state where svalid is checked
-in the next state change bdata_in <= sdata to "bdata_in <= sdata_reg;"
