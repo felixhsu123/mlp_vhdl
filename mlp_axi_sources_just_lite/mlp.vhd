@@ -139,7 +139,7 @@ end process;
     acc_tmp2_next <= acc_tmp2_reg;
     currmax_next <= currmax_reg;
     max_next <= max_reg;
-    --cl_num <= "0000";
+    cl_num <= "0000";
     
       baddr <= (others => '0');
       bdata_out <= (others => '0');
@@ -150,10 +150,8 @@ end process;
       sready <= '0';
         case state_reg is
             when idle =>
-                --res_next <= (others => '0'); --was commented so that cl_num output would stay the same until the next number is classified
+                res_next <= (others => '0');
                 acc_next <= (others => '0');
-                acc_tmp_next <= (others => '0');
-                acc_tmp2_next <= (others => '0');
                 p_next <= (others => '0');
                 layer_next <= (others => '0');
                 neuron_next <= (others => '0');
@@ -168,8 +166,7 @@ end process;
                 state_next <= wait_pixel;
             when wait_pixel =>
                 sready <= '1';
-                --if svalid = '1' then state_next <= load_pixel;
-                if svalid'event and svalid = '1' then state_next <= load_pixel;
+                if svalid = '1' then state_next <= load_pixel;
                 else state_next <= wait_pixel;
                 end if;
 
@@ -192,8 +189,6 @@ end process;
             when neuron_state =>
                     --toggle <= '1'; --subject to change
                     acc_next <= (others => '0');
-                    acc_tmp_next <= (others => '0');
-                    acc_tmp2_next <= (others => '0');
                     i_next <= (others => '0');
                     state_next <= synapse_state;
             when synapse_state =>
@@ -201,8 +196,7 @@ end process;
                     state_next <= wait_weight;       
             when wait_weight =>
                     sready <= '1';
-                    --if svalid = '1' then
-                    if svalid'event and svalid = '1' then 
+                    if svalid = '1' then 
                         state_next <= load_weight;
                         baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_reg)); --get this under control
                         en<='1';
@@ -226,8 +220,7 @@ end process;
                     end if;
             when wait_bias =>
                     sready <= '1';
-                    --if svalid = '1' then
-                    if svalid'event and svalid = '1' then 
+                    if svalid = '1' then 
                         state_next <= load_bias;
                         en<='1';
                         we<='0';
@@ -298,8 +291,6 @@ end process;
                     cl_num <= res_reg;
                     state_next <= idle;
         end case;
-        
-        --cl_num <= res_reg;
             
     end process;
 

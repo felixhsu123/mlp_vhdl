@@ -32,13 +32,12 @@ use IEEE.STD_LOGIC_1164.ALL;
 --use UNISIM.VComponents.all;
 
 entity mem_subsystem is
-    generic (WDATA: positive := 18); 
     Port ( clk : in STD_LOGIC;
            reset : in STD_LOGIC;
            -- Interface to the AXI controllers
-            reg_data_i : in std_logic_vector(WDATA-1 downto 0);
+            --reg_data_i : in std_logic_vector(log2c(SIZE)-1 downto 0);
             --start
-            start_wr_i : in STD_LOGIC;
+            start_axi_i : in STD_LOGIC;
             start_axi_o : out STD_LOGIC;
             start_mlp_o : out STD_LOGIC;
             --ready
@@ -49,36 +48,18 @@ entity mem_subsystem is
             toggle_axi_o : out STD_LOGIC;
             --cl_num
             cl_num_mlp_i: in STD_LOGIC_VECTOR(3 downto 0);
-            cl_num_axi_o : out STD_LOGIC_VECTOR(3 downto 0);
-            --sready
-            sready_mlp_i : in STD_LOGIC;
-            sready_axi_o : out STD_LOGIC;
-            --svalid
-            svalid_wr_i : in STD_LOGIC;
-            svalid_axi_o : out STD_LOGIC;
-            svalid_mlp_o : out STD_LOGIC;
-            --sdata
-            sdata_wr_i : in STD_LOGIC;
-            sdata_axi_o : out STD_LOGIC_VECTOR(WDATA-1 downto 0);
-            sdata_mlp_o : out STD_LOGIC_VECTOR(WDATA-1 downto 0));
+            cl_num_axi_o : out STD_LOGIC_VECTOR(3 downto 0));
 end mem_subsystem;
 
 architecture Behavioral of mem_subsystem is
     signal start_s, ready_s, toggle_s: STD_LOGIC;
     signal cl_num_s: STD_LOGIC_VECTOR(3 downto 0);
-    signal svalid_s, sready_s: STD_LOGIC;
-    signal sdata_s: STD_LOGIC_VECTOR(WDATA-1 downto 0);
 begin
     start_mlp_o <= start_s;
     start_axi_o <= start_s;
     ready_axi_o <= ready_s;
     toggle_axi_o <= toggle_s;
     cl_num_axi_o <= cl_num_s;
-    sready_axi_o <= sready_s;
-    svalid_axi_o <= svalid_s;
-    svalid_mlp_o <= svalid_s;
-    sdata_axi_o <= sdata_s;
-    sdata_mlp_o <= sdata_s;
     
     --start reg
     process(clk) 
@@ -86,8 +67,8 @@ begin
         if clk'event and clk='1' then
             if reset = '1' then
                 start_s <= '0';
-            elsif start_wr_i = '1' then
-                start_s <= reg_data_i(0);
+            else
+                start_s <= start_axi_i;
             end if;
         end if;
     end process;
@@ -126,42 +107,6 @@ begin
                 cl_num_s <= cl_num_mlp_i;
             end if;
         end if;
-    end process;      
-    
-    --sready reg
-    process(clk) 
-    begin
-        if clk'event and clk='1' then
-            if reset = '1' then
-                sready_s <= '0';
-            else
-                sready_s <= sready_mlp_i;
-            end if;
-        end if;
-    end process;
-    
-    --svalid reg
-    process(clk) 
-    begin
-        if clk'event and clk='1' then
-            if reset = '1' then
-                svalid_s <= '0';
-            elsif svalid_wr_i = '1' then
-                svalid_s <= reg_data_i(0);
-            end if;
-        end if;
-    end process;
-    
-    --sdata reg
-    process(clk) 
-    begin
-        if clk'event and clk='1' then
-            if reset = '1' then
-                sdata_s <= (others => '0');
-            elsif sdata_wr_i = '1' then
-                sdata_s <= reg_data_i(WDATA-1 downto 0);
-            end if;
-        end if;
-    end process;
-    
+    end process;        
+
 end Behavioral;
