@@ -168,13 +168,15 @@ end process;
                 state_next <= wait_pixel;
             when wait_pixel =>
                 sready <= '1';
-                if svalid = '1' then state_next <= load_pixel;
+                if svalid = '1' then 
+                    state_next <= load_pixel;
+                    sdata_next <= sdata;
                 else state_next <= wait_pixel;
                 end if;
 
             when load_pixel =>
                     baddr <= p_reg;
-                    bdata_out <= sdata;
+                    bdata_out <= sdata_reg;
                     en <= '1';
                     we <= '1';
                     p_next <= std_logic_vector( unsigned(p_reg) + 1 );
