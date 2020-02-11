@@ -169,7 +169,8 @@ end process;
                 state_next <= wait_pixel;
             when wait_pixel =>
                 sready <= '1';
-                if svalid = '1' then 
+                --if svalid = '1' then
+                if rising_edge(svalid) then 
                     state_next <= load_pixel;
                     sdata_next <= sdata;
                 else state_next <= wait_pixel;
@@ -199,7 +200,8 @@ end process;
                     state_next <= wait_weight;       
             when wait_weight =>
                     sready <= '1';
-                    if svalid = '1' then 
+                    --if svalid = '1' then 
+                    if rising_edge(svalid) then
                         state_next <= load_weight;
                         baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_reg));
                         en<='1';
@@ -220,7 +222,8 @@ end process;
                     end if;
             when wait_bias =>
                     sready <= '1';
-                    if svalid = '1' then 
+                    --if svalid = '1' then
+                    if rising_edge(svalid) then 
                         state_next <= load_bias;
                         en<='1';
                         we<='0';
