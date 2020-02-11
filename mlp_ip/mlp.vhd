@@ -164,7 +164,7 @@ end process;
                 else state_next <= idle;
                 end if;
             when start_state =>
-                toggle <= '1';
+                --toggle <= '1';
                 state_next <= wait_pixel;
             when wait_pixel =>
                 sready <= '1';
@@ -188,7 +188,7 @@ end process;
                         state_next <= layer_state;
                     end if;
             when layer_state =>
-                    toggle <= '1';
+                    --toggle <= '1';
                     neuron_next <= (others => '0');
                     state_next <= neuron_state;
             when neuron_state =>
