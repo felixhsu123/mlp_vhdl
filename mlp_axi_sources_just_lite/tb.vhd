@@ -40,7 +40,7 @@ architecture Behavioral of tb is
     file input_biases_2 : text ;
     signal clk_s: std_logic;
     signal reset_s: std_logic;
-    -- Matrix multiplier core's address map
+    -- Core's address map
     constant START_REG_ADDR_C : integer := 0;
     constant READY_REG_ADDR_C : integer := 4;
     constant TOGGLE_REG_ADDR_C : integer := 8;
@@ -87,6 +87,7 @@ begin
          variable check_v: line;
          variable tmp : std_logic_vector(3 downto 0);
          variable tmp_output : std_logic_vector(3 downto 0);
+         variable num_of_correct : integer:=0;
          begin
             -- reset AXI-lite interface. Reset will be 10 clock cycles wide
             s00_axi_aresetn_s <= '0';
@@ -103,7 +104,6 @@ begin
                 file_open(input_weights_2, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\weights2.txt", read_mode);
                 file_open(input_biases_1, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\biases1.txt", read_mode);
                 file_open(input_biases_2, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\biases2.txt", read_mode);
-                --report "Loading the matrix dimensions information into the Matrix Multiplier core!";
                 ------------------- STARTING MLP ------------------------------------
                 --report "Waiting for the MLP to be ready!";
                 loop
@@ -113,7 +113,6 @@ begin
                     s00_axi_arvalid_s <= '1';
                     s00_axi_rready_s <= '1';
                     wait until s00_axi_arready_s = '1';
-                    --axi_read_data_v := s00_axi_rdata_s;
                     wait until s00_axi_arready_s = '0';
                     axi_read_data_v := s00_axi_rdata_s;
                     wait until falling_edge(clk_s);
@@ -121,7 +120,7 @@ begin
                     s00_axi_arvalid_s <= '0';
                     s00_axi_rready_s <= '0';
                    
-                    -- Check is the 1st bit of the READY register set to one
+                    -- Check if the 1st bit of the READY register is set to one
                     if (axi_read_data_v(0) = '1') then
                         --WAIT NO MORE, EXIT THE LOOP
                         exit;
@@ -129,33 +128,36 @@ begin
                         wait for 1000 ns;
                     end if;
                  end loop;
+                 
                  --report "Reading CL_NUM register!";
-                 --loop
-                     wait until falling_edge(clk_s);
-                     s00_axi_araddr_s <= conv_std_logic_vector(CL_NUM_REG_ADDR_C, 5);
-                     s00_axi_arvalid_s <= '1';
-                     s00_axi_rready_s <= '1';
-                     wait until s00_axi_arready_s = '1';
-                     wait until s00_axi_arready_s = '0';
-                     axi_read_data_v := s00_axi_rdata_s;
-                     wait until falling_edge(clk_s);
-                     s00_axi_araddr_s <= conv_std_logic_vector(0, 5);
-                     s00_axi_arvalid_s <= '0';
-                     s00_axi_rready_s <= '0';
-                     
-                     if(k>0) then
-                         readline(labels,check_v);
-                         tmp := to_std_logic_vector(string(check_v));
-                         tmp_output := axi_read_data_v(3 downto 0);
-                         if(tmp = tmp_output) then
-                            report "Correct classification " & integer'image(k);
-                         else
-                            report "Wrong classification" & integer'image(k);
-                         end if;
-                     end if;
-                  --end loop;
-                 --report "Starting MLP!";
-                -- Set the value start bit (bit 0 in the START register) to 1
+                 if(k>0) then   
+                         wait until falling_edge(clk_s);
+                         s00_axi_araddr_s <= conv_std_logic_vector(CL_NUM_REG_ADDR_C, 5);
+                         s00_axi_arvalid_s <= '1';
+                         s00_axi_rready_s <= '1';
+                         wait until s00_axi_arready_s = '1';
+                         wait until s00_axi_arready_s = '0';
+                         axi_read_data_v := s00_axi_rdata_s;
+                         wait until falling_edge(clk_s);
+                         s00_axi_araddr_s <= conv_std_logic_vector(0, 5);
+                         s00_axi_arvalid_s <= '0';
+                         s00_axi_rready_s <= '0';
+                         
+                          -- if(k>0) then
+                             readline(labels,check_v);
+                             tmp := to_std_logic_vector(string(check_v));
+                             tmp_output := axi_read_data_v(3 downto 0);
+                             if(tmp = tmp_output) then
+                                report "Correct classification " & integer'image(k);
+                                num_of_correct := num_of_correct + 1;
+                             else
+                                report "Wrong classification " & integer'image(k);
+                             end if;
+                 end if;
+  
+                  
+                --report "Starting MLP!";
+                -- Set bit 0 in the START register to 1
                 wait until falling_edge(clk_s);
                 s00_axi_awaddr_s <= conv_std_logic_vector(START_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
                 s00_axi_awvalid_s <= '1';
@@ -224,7 +226,7 @@ begin
                         s00_axi_arvalid_s <= '0';
                         s00_axi_rready_s <= '0';
                        
-                        -- Check is the 1st bit of the READY register set to one
+                        -- Check if the 1st bit of the SREADY register is set to one
                         if (axi_read_data_v(0) = '1') then
                             --WAIT NO MORE, EXIT THE LOOP
                             exit;
@@ -238,7 +240,6 @@ begin
                     --report "Writing sdata register: data_in=" & string(curr_value) & "h";
                     s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
                     s00_axi_awvalid_s <= '1';
-                    --s00_axi_wdata_s <= conv_std_logic_vector(curr_value, C_S00_AXI_DATA_WIDTH_c );
                     s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
                     s00_axi_wvalid_s <= '1';
                     s00_axi_wstrb_s <= "1111";
@@ -300,6 +301,7 @@ begin
                     
                 end loop;
                 
+                --send weights and biases for 1st layer
                 for j in 0 to 29 loop
                     for i in 0 to 783 loop
                             loop
@@ -317,7 +319,7 @@ begin
                                 s00_axi_arvalid_s <= '0';
                                 s00_axi_rready_s <= '0';
                                
-                                -- Check is the 1st bit of the READY register set to one
+                                -- Check if the 1st bit of the SREADY register is set to one
                                 if (axi_read_data_v(0) = '1') then
                                     --WAIT NO MORE, EXIT THE LOOP
                                     exit;
@@ -331,7 +333,6 @@ begin
                         --report "Writing sdata register: data_in=" & string(curr_value) & "h";
                         s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
                         s00_axi_awvalid_s <= '1';
-                        --s00_axi_wdata_s <= conv_std_logic_vector(curr_value, C_S00_AXI_DATA_WIDTH_c );
                         s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
                         s00_axi_wvalid_s <= '1';
                         s00_axi_wstrb_s <= "1111";
@@ -407,7 +408,7 @@ begin
                         s00_axi_arvalid_s <= '0';
                         s00_axi_rready_s <= '0';
                        
-                        -- Check is the 1st bit of the READY register set to one
+                        -- Check if the 1st bit of the SREADY register is set to one
                         if (axi_read_data_v(0) = '1') then
                             --WAIT NO MORE, EXIT THE LOOP
                             exit;
@@ -421,7 +422,6 @@ begin
                     --report "Writing bias in sdata register: data_in=" & string(curr_value) & "h";
                     s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
                     s00_axi_awvalid_s <= '1';
-                    --s00_axi_wdata_s <= conv_std_logic_vector(curr_value, C_S00_AXI_DATA_WIDTH_c );
                     s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
                     s00_axi_wvalid_s <= '1';
                     s00_axi_wstrb_s <= "1111";
@@ -482,188 +482,186 @@ begin
                     wait until falling_edge(clk_s);
                 end loop;
                 
-                --layer no. 2
+                --send weights and biases for 2nd layer
                 for j in 0 to 9 loop
-                                    for i in 0 to 29 loop
-                                            loop
-                                                -- Read the content of the SREADY register
-                                                --report "Reading sready register.";
-                                                wait until falling_edge(clk_s);
-                                                s00_axi_araddr_s <= conv_std_logic_vector(SREADY_REG_ADDR_C, 5);
-                                                s00_axi_arvalid_s <= '1';
-                                                s00_axi_rready_s <= '1';
-                                                wait until s00_axi_arready_s = '1';
-                                                axi_read_data_v := s00_axi_rdata_s;
-                                                wait until s00_axi_arready_s = '0';
-                                                wait until falling_edge(clk_s);
-                                                s00_axi_araddr_s <= conv_std_logic_vector(0, 5);
-                                                s00_axi_arvalid_s <= '0';
-                                                s00_axi_rready_s <= '0';
-                                               
-                                                -- Check is the 1st bit of the READY register set to one
-                                                if (axi_read_data_v(0) = '1') then
-                                                    --WAIT NO MORE, EXIT THE LOOP
-                                                    exit;
-                                                else
-                                                    wait for 1000 ns;
-                                                end if;
-                                             end loop;
-                                             readline(input_weights_2,curr_value);
-                                                         
-                                        wait until falling_edge(clk_s);
-                                        --report "Writing sdata register: data_in=" & string(curr_value) & "h";
-                                        s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
-                                        s00_axi_awvalid_s <= '1';
-                                        --s00_axi_wdata_s <= conv_std_logic_vector(curr_value, C_S00_AXI_DATA_WIDTH_c );
-                                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
-                                        s00_axi_wvalid_s <= '1';
-                                        s00_axi_wstrb_s <= "1111";
-                                        s00_axi_bready_s <= '1';
-                                        wait until s00_axi_awready_s = '1';
-                                        wait until s00_axi_awready_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
-                                        s00_axi_awvalid_s <= '0';
-                                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
-                                        s00_axi_wvalid_s <= '0';
-                                        s00_axi_wstrb_s <= "0000";
-                                        wait until s00_axi_bvalid_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_bready_s <= '0';
-                                        wait until falling_edge(clk_s);
-                                        
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
-                                        s00_axi_awvalid_s <= '1';
-                                        s00_axi_wdata_s <= conv_std_logic_vector(1, C_S00_AXI_DATA_WIDTH_c );
-                                        s00_axi_wvalid_s <= '1';
-                                        s00_axi_wstrb_s <= "1111";
-                                        s00_axi_bready_s <= '1';
-                                        wait until s00_axi_awready_s = '1';
-                                        wait until s00_axi_awready_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
-                                        s00_axi_awvalid_s <= '0';
-                                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
-                                        s00_axi_wvalid_s <= '0';
-                                        s00_axi_wstrb_s <= "0000";
-                                        wait until s00_axi_bvalid_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_bready_s <= '0';
-                                        wait until falling_edge(clk_s);
-                                        
-                                        --wait for 250 ns;
-                                        
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
-                                        s00_axi_awvalid_s <= '1';
-                                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c );
-                                        s00_axi_wvalid_s <= '1';
-                                        s00_axi_wstrb_s <= "1111";
-                                        s00_axi_bready_s <= '1';
-                                        wait until s00_axi_awready_s = '1';
-                                        wait until s00_axi_awready_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
-                                        s00_axi_awvalid_s <= '0';
-                                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
-                                        s00_axi_wvalid_s <= '0';
-                                        s00_axi_wstrb_s <= "0000";
-                                        wait until s00_axi_bvalid_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_bready_s <= '0';
-                                        wait until falling_edge(clk_s);
-                                    end loop;
-                                    --now sending bias
-                                    loop
-                                        -- Read the content of the SREADY register
-                                        --report "Reading sready register.";
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_araddr_s <= conv_std_logic_vector(SREADY_REG_ADDR_C, 5);
-                                        s00_axi_arvalid_s <= '1';
-                                        s00_axi_rready_s <= '1';
-                                        wait until s00_axi_arready_s = '1';
-                                        axi_read_data_v := s00_axi_rdata_s;
-                                        wait until s00_axi_arready_s = '0';
-                                        wait until falling_edge(clk_s);
-                                        s00_axi_araddr_s <= conv_std_logic_vector(0, 5);
-                                        s00_axi_arvalid_s <= '0';
-                                        s00_axi_rready_s <= '0';
-                                       
-                                        -- Check is the 1st bit of the READY register set to one
-                                        if (axi_read_data_v(0) = '1') then
-                                            --WAIT NO MORE, EXIT THE LOOP
-                                            exit;
-                                        else
-                                            wait for 1000 ns;
-                                        end if;
-                                    end loop;
-                                    readline(input_biases_2,curr_value);
-                                                     
-                                    wait until falling_edge(clk_s);
-                                    --report "Writing bias in sdata register: data_in=" & string(curr_value) & "h";
-                                    s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
-                                    s00_axi_awvalid_s <= '1';
-                                    --s00_axi_wdata_s <= conv_std_logic_vector(curr_value, C_S00_AXI_DATA_WIDTH_c );
-                                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
-                                    s00_axi_wvalid_s <= '1';
-                                    s00_axi_wstrb_s <= "1111";
-                                    s00_axi_bready_s <= '1';
-                                    wait until s00_axi_awready_s = '1';
-                                    wait until s00_axi_awready_s = '0';
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
-                                    s00_axi_awvalid_s <= '0';
-                                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
-                                    s00_axi_wvalid_s <= '0';
-                                    s00_axi_wstrb_s <= "0000";
-                                    wait until s00_axi_bvalid_s = '0';
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_bready_s <= '0';
-                                    wait until falling_edge(clk_s);
-                                    
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
-                                    s00_axi_awvalid_s <= '1';
-                                    s00_axi_wdata_s <= conv_std_logic_vector(1, C_S00_AXI_DATA_WIDTH_c );
-                                    s00_axi_wvalid_s <= '1';
-                                    s00_axi_wstrb_s <= "1111";
-                                    s00_axi_bready_s <= '1';
-                                    wait until s00_axi_awready_s = '1';
-                                    wait until s00_axi_awready_s = '0';
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
-                                    s00_axi_awvalid_s <= '0';
-                                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
-                                    s00_axi_wvalid_s <= '0';
-                                    s00_axi_wstrb_s <= "0000";
-                                    wait until s00_axi_bvalid_s = '0';
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_bready_s <= '0';
-                                    wait until falling_edge(clk_s);
-                                    
-                                    --wait for 250 ns;
-                                    
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
-                                    s00_axi_awvalid_s <= '1';
-                                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c );
-                                    s00_axi_wvalid_s <= '1';
-                                    s00_axi_wstrb_s <= "1111";
-                                    s00_axi_bready_s <= '1';
-                                    wait until s00_axi_awready_s = '1';
-                                    wait until s00_axi_awready_s = '0';
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
-                                    s00_axi_awvalid_s <= '0';
-                                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
-                                    s00_axi_wvalid_s <= '0';
-                                    s00_axi_wstrb_s <= "0000";
-                                    wait until s00_axi_bvalid_s = '0';
-                                    wait until falling_edge(clk_s);
-                                    s00_axi_bready_s <= '0';
-                                    wait until falling_edge(clk_s);
-                                end loop;
+                    for i in 0 to 29 loop
+                            loop
+                                -- Read the content of the SREADY register
+                                --report "Reading sready register.";
+                                wait until falling_edge(clk_s);
+                                s00_axi_araddr_s <= conv_std_logic_vector(SREADY_REG_ADDR_C, 5);
+                                s00_axi_arvalid_s <= '1';
+                                s00_axi_rready_s <= '1';
+                                wait until s00_axi_arready_s = '1';
+                                axi_read_data_v := s00_axi_rdata_s;
+                                wait until s00_axi_arready_s = '0';
+                                wait until falling_edge(clk_s);
+                                s00_axi_araddr_s <= conv_std_logic_vector(0, 5);
+                                s00_axi_arvalid_s <= '0';
+                                s00_axi_rready_s <= '0';
+                               
+                                -- Check if the 1st bit of the SREADY register is set to one
+                                if (axi_read_data_v(0) = '1') then
+                                    --WAIT NO MORE, EXIT THE LOOP
+                                    exit;
+                                else
+                                    wait for 1000 ns;
+                                end if;
+                             end loop;
+                             readline(input_weights_2,curr_value);
+                                         
+                        wait until falling_edge(clk_s);
+                        --report "Writing sdata register: data_in=" & string(curr_value) & "h";
+                        s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
+                        s00_axi_awvalid_s <= '1';
+                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
+                        s00_axi_wvalid_s <= '1';
+                        s00_axi_wstrb_s <= "1111";
+                        s00_axi_bready_s <= '1';
+                        wait until s00_axi_awready_s = '1';
+                        wait until s00_axi_awready_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
+                        s00_axi_awvalid_s <= '0';
+                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
+                        s00_axi_wvalid_s <= '0';
+                        s00_axi_wstrb_s <= "0000";
+                        wait until s00_axi_bvalid_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_bready_s <= '0';
+                        wait until falling_edge(clk_s);
+                        
+                        wait until falling_edge(clk_s);
+                        s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
+                        s00_axi_awvalid_s <= '1';
+                        s00_axi_wdata_s <= conv_std_logic_vector(1, C_S00_AXI_DATA_WIDTH_c );
+                        s00_axi_wvalid_s <= '1';
+                        s00_axi_wstrb_s <= "1111";
+                        s00_axi_bready_s <= '1';
+                        wait until s00_axi_awready_s = '1';
+                        wait until s00_axi_awready_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
+                        s00_axi_awvalid_s <= '0';
+                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
+                        s00_axi_wvalid_s <= '0';
+                        s00_axi_wstrb_s <= "0000";
+                        wait until s00_axi_bvalid_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_bready_s <= '0';
+                        wait until falling_edge(clk_s);
+                        
+                        --wait for 250 ns;
+                        
+                        wait until falling_edge(clk_s);
+                        s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
+                        s00_axi_awvalid_s <= '1';
+                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c );
+                        s00_axi_wvalid_s <= '1';
+                        s00_axi_wstrb_s <= "1111";
+                        s00_axi_bready_s <= '1';
+                        wait until s00_axi_awready_s = '1';
+                        wait until s00_axi_awready_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
+                        s00_axi_awvalid_s <= '0';
+                        s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
+                        s00_axi_wvalid_s <= '0';
+                        s00_axi_wstrb_s <= "0000";
+                        wait until s00_axi_bvalid_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_bready_s <= '0';
+                        wait until falling_edge(clk_s);
+                    end loop;
+                    --now sending bias
+                    loop
+                        -- Read the content of the SREADY register
+                        --report "Reading sready register.";
+                        wait until falling_edge(clk_s);
+                        s00_axi_araddr_s <= conv_std_logic_vector(SREADY_REG_ADDR_C, 5);
+                        s00_axi_arvalid_s <= '1';
+                        s00_axi_rready_s <= '1';
+                        wait until s00_axi_arready_s = '1';
+                        axi_read_data_v := s00_axi_rdata_s;
+                        wait until s00_axi_arready_s = '0';
+                        wait until falling_edge(clk_s);
+                        s00_axi_araddr_s <= conv_std_logic_vector(0, 5);
+                        s00_axi_arvalid_s <= '0';
+                        s00_axi_rready_s <= '0';
+                       
+                        -- Check if the 1st bit of the SREADY register is set to one
+                        if (axi_read_data_v(0) = '1') then
+                            --WAIT NO MORE, EXIT THE LOOP
+                            exit;
+                        else
+                            wait for 1000 ns;
+                        end if;
+                    end loop;
+                    readline(input_biases_2,curr_value);
+                                     
+                    wait until falling_edge(clk_s);
+                    --report "Writing bias in sdata register: data_in=" & string(curr_value) & "h";
+                    s00_axi_awaddr_s <= conv_std_logic_vector(SDATA_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
+                    s00_axi_awvalid_s <= '1';
+                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c - 18 ) & to_std_logic_vector(string(curr_value));
+                    s00_axi_wvalid_s <= '1';
+                    s00_axi_wstrb_s <= "1111";
+                    s00_axi_bready_s <= '1';
+                    wait until s00_axi_awready_s = '1';
+                    wait until s00_axi_awready_s = '0';
+                    wait until falling_edge(clk_s);
+                    s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
+                    s00_axi_awvalid_s <= '0';
+                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
+                    s00_axi_wvalid_s <= '0';
+                    s00_axi_wstrb_s <= "0000";
+                    wait until s00_axi_bvalid_s = '0';
+                    wait until falling_edge(clk_s);
+                    s00_axi_bready_s <= '0';
+                    wait until falling_edge(clk_s);
+                    
+                    wait until falling_edge(clk_s);
+                    s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
+                    s00_axi_awvalid_s <= '1';
+                    s00_axi_wdata_s <= conv_std_logic_vector(1, C_S00_AXI_DATA_WIDTH_c );
+                    s00_axi_wvalid_s <= '1';
+                    s00_axi_wstrb_s <= "1111";
+                    s00_axi_bready_s <= '1';
+                    wait until s00_axi_awready_s = '1';
+                    wait until s00_axi_awready_s = '0';
+                    wait until falling_edge(clk_s);
+                    s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
+                    s00_axi_awvalid_s <= '0';
+                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
+                    s00_axi_wvalid_s <= '0';
+                    s00_axi_wstrb_s <= "0000";
+                    wait until s00_axi_bvalid_s = '0';
+                    wait until falling_edge(clk_s);
+                    s00_axi_bready_s <= '0';
+                    wait until falling_edge(clk_s);
+                    
+                    --wait for 250 ns;
+                    
+                    wait until falling_edge(clk_s);
+                    s00_axi_awaddr_s <= conv_std_logic_vector(SVALID_REG_ADDR_C, C_S00_AXI_ADDR_WIDTH_c);
+                    s00_axi_awvalid_s <= '1';
+                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c );
+                    s00_axi_wvalid_s <= '1';
+                    s00_axi_wstrb_s <= "1111";
+                    s00_axi_bready_s <= '1';
+                    wait until s00_axi_awready_s = '1';
+                    wait until s00_axi_awready_s = '0';
+                    wait until falling_edge(clk_s);
+                    s00_axi_awaddr_s <= conv_std_logic_vector(0, C_S00_AXI_ADDR_WIDTH_c);
+                    s00_axi_awvalid_s <= '0';
+                    s00_axi_wdata_s <= conv_std_logic_vector(0, C_S00_AXI_DATA_WIDTH_c);
+                    s00_axi_wvalid_s <= '0';
+                    s00_axi_wstrb_s <= "0000";
+                    wait until s00_axi_bvalid_s = '0';
+                    wait until falling_edge(clk_s);
+                    s00_axi_bready_s <= '0';
+                    wait until falling_edge(clk_s);
+                end loop;
                 
                 file_close(input_weights_1);
                 file_close(input_weights_2);
@@ -687,7 +685,7 @@ begin
                 s00_axi_arvalid_s <= '0';
                 s00_axi_rready_s <= '0';
                
-                -- Check is the 1st bit of the READY register set to one
+                -- Check if the 1st bit of the READY register is set to one
                 if (axi_read_data_v(0) = '1') then
                     --WAIT NO MORE, EXIT THE LOOP
                     exit;
@@ -695,6 +693,7 @@ begin
                     wait for 1000 ns;
                 end if;
              end loop;
+             
              --report "Reading CL_NUM register!";
                  wait until falling_edge(clk_s);
                  s00_axi_araddr_s <= conv_std_logic_vector(CL_NUM_REG_ADDR_C, 5);
@@ -712,10 +711,12 @@ begin
                  tmp_output := axi_read_data_v(3 downto 0);
                  if(tmp = tmp_output) then
                     report "Correct classification";
+                    num_of_correct := num_of_correct + 1;
                  else
-                    report "Wrong classification";
+                    report "Wrong classification ";
                  end if;
- 
+            report "Number of correct classifications is " & integer'image(num_of_correct);
+            
             wait;
             
         end process stimulus_generator;              

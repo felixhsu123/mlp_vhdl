@@ -59,7 +59,7 @@ end mlp;
 
 architecture Behavioral of mlp is
     type state_type is (idle, start_state, wait_pixel, load_pixel, layer_state, wait_weight, load_weight,
-    wait_bias, load_bias, neuron_state, synapse_state, cont, cont1, find_res, find_res_1, end_state);
+    wait_bias, load_bias, neuron_state, cont, cont1, find_res, find_res_1, end_state);
     signal state_reg, state_next: state_type;
     signal acc_reg, acc_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
     signal acc_tmp_reg, acc_tmp_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
@@ -74,12 +74,12 @@ architecture Behavioral of mlp is
     signal res_reg, res_next: STD_LOGIC_VECTOR(3 downto 0); 
     signal max_reg, max_next: STD_LOGIC_VECTOR(WDATA-1 downto 0);
     signal currmax_reg, currmax_next: STD_LOGIC_VECTOR(WDATA-1 downto 0);
-    constant param: STD_LOGIC_VECTOR(15 downto 0):= (x"0004"); --leakyReLu parameter 4 + 12
-    type mem_t is array(0 to 2) of positive;--std_logic_vector(DATA_WDATA_c - 1 downto 0);
-    constant neuron_array: mem_t := (784, 30, 10);--(conv_std_logic_vector(1, DATA_WDATA_c),conv_std_logic_vector(2, DATA_WDATA_c),conv_std_logic_vector(3, DATA_WDATA_c));
+    constant param: STD_LOGIC_VECTOR(15 downto 0):= (x"0004"); --leakyReLu parameter (4 + 12 bits)
+    type mem_t is array(0 to 2) of positive;
+    constant neuron_array: mem_t := (784, 30, 10); --number of neurons in each layer
     subtype addr_range_t is integer range 0 to 900;
-    type addr_t is array(0 to 2) of addr_range_t;--std_logic_vector(DATA_WDATA_c - 1 downto 0);
-    constant start_addr: addr_t := (0, 784, 814);
+    type addr_t is array(0 to 2) of addr_range_t;
+    constant start_addr: addr_t := (0, 784, 814); -- start addresses in bram of layer inputs 
 begin
     --state register
     process (clk) is
@@ -139,19 +139,22 @@ end process;
     acc_tmp2_next <= acc_tmp2_reg;
     currmax_next <= currmax_reg;
     max_next <= max_reg;
-    cl_num <= "0000";
     
-      baddr <= (others => '0');
-      bdata_out <= (others => '0');
-      en <= '0';
-      we <= '0';
-      ready <= '0';
-      toggle <= '0';
-      sready <= '0';
+    --cl_num <= "0000";
+    cl_num <= res_reg;
+    baddr <= (others => '0');
+    bdata_out <= (others => '0');
+    en <= '0';
+    we <= '0';
+    ready <= '0';
+    toggle <= '0';
+    sready <= '0';
         case state_reg is
             when idle =>
-                res_next <= (others => '0');
+                --res_next <= (others => '0'); --was commented so that cl_num output would stay the same until the next number is classified
                 acc_next <= (others => '0');
+                acc_tmp_next <= (others => '0');
+                acc_tmp2_next <= (others => '0');
                 p_next <= (others => '0');
                 layer_next <= (others => '0');
                 neuron_next <= (others => '0');
@@ -162,17 +165,20 @@ end process;
                 else state_next <= idle;
                 end if;
             when start_state =>
-                toggle <= '1';
+                --toggle <= '1';
                 state_next <= wait_pixel;
             when wait_pixel =>
                 sready <= '1';
-                if svalid = '1' then state_next <= load_pixel;
+                --if svalid = '1' then
+                if rising_edge(svalid) then 
+                    state_next <= load_pixel;
+                    sdata_next <= sdata;
                 else state_next <= wait_pixel;
                 end if;
 
             when load_pixel =>
                     baddr <= p_reg;
-                    bdata_out <= sdata;
+                    bdata_out <= sdata_reg;
                     en <= '1';
                     we <= '1';
                     p_next <= std_logic_vector( unsigned(p_reg) + 1 );
@@ -183,22 +189,21 @@ end process;
                         state_next <= layer_state;
                     end if;
             when layer_state =>
-                    toggle <= '1';
+                    --toggle <= '1';
                     neuron_next <= (others => '0');
                     state_next <= neuron_state;
             when neuron_state =>
-                    --toggle <= '1'; --subject to change
                     acc_next <= (others => '0');
+                    acc_tmp_next <= (others => '0');
+                    acc_tmp2_next <= (others => '0');
                     i_next <= (others => '0');
-                    state_next <= synapse_state;
-            when synapse_state =>
-                    --toggle <= '1'; --moved to neuron_state
                     state_next <= wait_weight;       
             when wait_weight =>
                     sready <= '1';
-                    if svalid = '1' then 
+                    --if svalid = '1' then 
+                    if rising_edge(svalid) then
                         state_next <= load_weight;
-                        baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_reg)); --get this under control
+                        baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_reg));
                         en<='1';
                         we<='0';
                         sdata_next <= sdata;
@@ -207,20 +212,18 @@ end process;
                     end if;
             when load_weight =>
                     product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata_reg));
-                    --acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(31 downto 14))); -- parametrize WDATAs
                     acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(WDATA + ACC_WDATA/2 - 1 downto ACC_WDATA/2)));                    
                     i_next <= std_logic_vector(unsigned(i_reg) + 1);
                     if unsigned(i_next) < neuron_array(to_integer(unsigned(layer_reg)) - 1)
-                    then 
-                        --state_next <= synapse_state;
+                    then
                         state_next <= wait_weight;
                     else 
-                        --toggle <= '1'; 
                         state_next <= wait_bias;
                     end if;
             when wait_bias =>
                     sready <= '1';
-                    if svalid = '1' then 
+                    --if svalid = '1' then
+                    if rising_edge(svalid) then 
                         state_next <= load_bias;
                         en<='1';
                         we<='0';
@@ -230,8 +233,6 @@ end process;
                     end if;
             when load_bias =>
                     acc_tmp_next <= std_logic_vector(signed(acc_reg) + signed(sdata_reg));
-                    --if signed(acc_tmp) < 0 then acc_next <= acc_tmp * 0.001;
-                    --if acc_tmp_next(acc_tmp_next'left) = '1' then
                     if signed(acc_tmp_next) < 0 then 
                         acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * signed(param));
                        -- acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * 0.001);
@@ -241,7 +242,6 @@ end process;
                     end if;
                     
                     --write result in bram
-                    --baddr <= "00000"&std_logic_vector(start_addr(to_integer(unsigned(layer_reg))) + unsigned(neuron_reg)); --concatenation possible problem
                     baddr <= std_logic_vector(to_unsigned(start_addr(to_integer(unsigned(layer_reg))) + to_integer(unsigned(neuron_reg)), baddr'length));
                     bdata_out <= acc_next(WDATA - 1 downto 0);
                     en <= '1';
@@ -269,7 +269,6 @@ end process;
                     state_next <= find_res;
             when find_res =>
                    --read from bram
-                  --baddr <= "000000"&std_logic_vector(unsigned(j_reg) + start_addr( LAYER_NUM - 1)); --concatenation possible problem
                   baddr <= std_logic_vector(to_unsigned(start_addr(LAYER_NUM - 1) + to_integer(unsigned(j_reg)), baddr'length));
                   en <= '1';
                   we <= '0';
@@ -288,10 +287,9 @@ end process;
              	  end if;
             when end_state =>
                     toggle <= '1';
-                    cl_num <= res_reg;
+                    --cl_num <= res_reg;
                     state_next <= idle;
-        end case;
-            
+        end case;        
     end process;
 
 end Behavioral;
