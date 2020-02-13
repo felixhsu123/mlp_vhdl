@@ -63,7 +63,9 @@ entity axi_mlp_v1_0 is
 end axi_mlp_v1_0;
 
 architecture arch_imp of axi_mlp_v1_0 is
+    signal reset_s : std_logic;
     --**AXI LITE <-> MEM SUBS
+    signal reg_data_s: std_logic;
     signal start_al2mm: std_logic;
     signal start_mm2al: std_logic;
     signal ready_mm2al: std_logic;
@@ -118,13 +120,12 @@ architecture arch_imp of axi_mlp_v1_0 is
 		S_AXI_RRESP	: out std_logic_vector(1 downto 0);
 		S_AXI_RVALID	: out std_logic;
 		S_AXI_RREADY	: in std_logic
-		
-		
 		);
 	end component axi_mlp_v1_0_S00_AXI;
 
 	component axi_mlp_v1_0_S00_AXIS is
 		generic (
+		WDATA: positive := 18;
 		C_S_AXIS_TDATA_WIDTH	: integer	:= 32
 		);
 		port (
@@ -143,23 +144,17 @@ begin
 -- Instantiation of Axi Bus Interface S00_AXI
 axi_mlp_v1_0_S00_AXI_inst : entity work.axi_mlp_v1_0_S00_AXI(arch_imp)
 	generic map (
-	   --user added generic
-        WDATA => WDATA,
-        WADDR => WADDR,
-        ACC_WDATA => ACC_WDATA,
-        IMG_LEN => IMG_LEN,
-        LAYER_NUM => LAYER_NUM,
-	   --user added generics end here
 		C_S_AXI_DATA_WIDTH	=> C_S00_AXI_DATA_WIDTH,
 		C_S_AXI_ADDR_WIDTH	=> C_S00_AXI_ADDR_WIDTH
 	)
 	port map (
 	   --user added ports
-	   S_AXI_START_O => start_al2mm,
-	   S_AXI_START_I => start_mm2al,
-	   S_AXI_READY_I => ready_mm2al,
-	   S_AXI_TOGGLE_I => toggle_mm2al,
-	   S_AXI_CL_NUM_I => cl_num_mm2al,
+        REG_DATA_O => reg_data_s,
+        S_WR_START_O => start_al2mm,
+        S_AXI_START_I => start_mm2al,
+        S_AXI_READY_I => ready_mm2al,
+        S_AXI_TOGGLE_I => toggle_mm2al,
+        S_AXI_CL_NUM_I => cl_num_mm2al,
 	   --user added ports end here
 		S_AXI_ACLK	=> s00_axi_aclk,
 		S_AXI_ARESETN	=> s00_axi_aresetn,
@@ -187,10 +182,7 @@ axi_mlp_v1_0_S00_AXI_inst : entity work.axi_mlp_v1_0_S00_AXI(arch_imp)
 -- Instantiation of Axi Bus Interface S00_AXIS
 axi_mlp_v1_0_S00_AXIS_inst : entity work.axi_mlp_v1_0_S00_AXIS(arch_imp)
 	generic map (
-        --user added generic
-        WDATA => WDATA,
-        WADDR => WADDR,
-        --user added generics end here
+	    WDATA => WDATA,
 		C_S_AXIS_TDATA_WIDTH	=> C_S00_AXIS_TDATA_WIDTH
 	)
 	port map (
@@ -209,7 +201,7 @@ axi_mlp_v1_0_S00_AXIS_inst : entity work.axi_mlp_v1_0_S00_AXIS(arch_imp)
 	);
 
 	-- Add user logic here
-    --reset_s <= not s00_axi_aresetn;
+    reset_s <= not s00_axi_aresetn;
     
     --instantiation of mlp
     mlp: entity work.mlp(Behavioral)
@@ -223,7 +215,7 @@ axi_mlp_v1_0_S00_AXIS_inst : entity work.axi_mlp_v1_0_S00_AXIS(arch_imp)
      port map (
             ---- Clocking and reset interface
             clk => s00_axi_aclk,
-            reset => s00_axi_aresetn,
+            reset => reset_s,
             ---- Command and Status interfaces 
             start => start_mm2mlp,
             ready => ready_mlp2mm,
@@ -244,18 +236,21 @@ axi_mlp_v1_0_S00_AXIS_inst : entity work.axi_mlp_v1_0_S00_AXIS(arch_imp)
     memory_subsystem: entity work.mem_subsystem(Behavioral)
     port map(
         clk => s00_axi_aclk,
-        reset => s00_axi_aresetn,
-        start_axi_i => start_al2mm,
+        reset => reset_s,
+        reg_data_i => reg_data_s,
+        --start
+        start_wr_i => start_al2mm,
         start_axi_o => start_mm2al,
         start_mlp_o => start_mm2mlp,
+        --ready
         ready_axi_o => ready_mm2al,
         ready_mlp_i => ready_mlp2mm,
+        --toggle
         toggle_axi_o => toggle_mm2al,
         toggle_mlp_i => toggle_mlp2mm, 
+        --cl_num
         cl_num_axi_o => cl_num_mm2al,
         cl_num_mlp_i => cl_num_mlp2mm
-       -- state_axi_o => state_mm2al,
-        --state_mlp_i => state_mlp2mm
     );
     
      --instantiation of BRAM
@@ -265,7 +260,7 @@ axi_mlp_v1_0_S00_AXIS_inst : entity work.axi_mlp_v1_0_S00_AXIS(arch_imp)
          WDATA => WDATA)
      port map (
          clk => s00_axi_aclk,
-         reset => s00_axi_aresetn,
+         reset => reset_s,
          addra => baddr_mlp2br,
          dia => bdata_mlp2br, --output from mlp is input for bram
          doa => bdata_br2mlp,

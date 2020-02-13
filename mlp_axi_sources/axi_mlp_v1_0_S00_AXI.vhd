@@ -5,11 +5,7 @@ use ieee.std_logic_arith.all; --because we use conv_std_logic_vector function
 entity axi_mlp_v1_0_S00_AXI is
 	generic (
 		-- Users to add parameters here
-        WDATA: positive := 18;
-        WADDR: positive := 10;
-        ACC_WDATA: positive := 28;
-        IMG_LEN: positive := 784;
-        LAYER_NUM: positive := 3; 
+		
 		-- User parameters ends
 		-- Do not modify the parameters beyond this line
 
@@ -20,8 +16,9 @@ entity axi_mlp_v1_0_S00_AXI is
 	);
 	port (
 		-- Users to add ports here
+        REG_DATA_O: out STD_LOGIC;
         S_AXI_START_I : in STD_LOGIC;
-        S_AXI_START_O : out STD_LOGIC;
+        S_WR_START_O : out STD_LOGIC;
         S_AXI_READY_I : in STD_LOGIC;
         S_AXI_TOGGLE_I : in STD_LOGIC;
         S_AXI_CL_NUM_I : in STD_LOGIC_VECTOR(3 downto 0);
@@ -114,7 +111,7 @@ architecture arch_imp of axi_mlp_v1_0_S00_AXI is
 	constant OPT_MEM_ADDR_BITS : integer := 1;
 	------------------------------------------------
 	---- Signals for user logic register space example
-	signal start_s: STD_LOGIC;
+	--signal start_s: STD_LOGIC;
 	--------------------------------------------------
 	---- Number of Slave Registers 4
 	signal slv_reg0	:std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
@@ -217,14 +214,14 @@ begin
 	begin
 	  if rising_edge(S_AXI_ACLK) then 
 	    if S_AXI_ARESETN = '0' then
-	      start_s <= '0';
+	      S_WR_START_O <= '0';
 	    else
-	       start_s <= '0';
+	       S_WR_START_O <= '0';
 	      loc_addr := axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
 	      if (slv_reg_wren = '1') then
 	        case loc_addr is
 	          when b"00" =>
-	            start_s <= S_AXI_WDATA(0);
+	            S_WR_START_O <= '1';
 	          when others =>
 	        end case;
 	      end if;
@@ -352,7 +349,12 @@ begin
 
 
 	-- Add user logic here
-    S_AXI_START_O <= start_s;
+    process (S_AXI_ACLK)
+    begin
+        if (S_AXI_ACLK'event and S_AXI_ACLK = '1') then
+            reg_data_o <= S_AXI_WDATA(0);
+        end if;
+    end process;
 	-- User logic ends
 
 end arch_imp;

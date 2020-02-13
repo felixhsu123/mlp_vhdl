@@ -6,7 +6,6 @@ entity axi_mlp_v1_0_S00_AXIS is
 	generic (
 		-- Users to add parameters here
         WDATA: positive := 18;
-        WADDR: positive := 10;
 		-- User parameters ends
 		-- Do not modify the parameters beyond this line
 
@@ -81,7 +80,8 @@ architecture arch_imp of axi_mlp_v1_0_S00_AXIS is
 --	-- sink has accepted all the streaming data and stored in FIFO
 --	signal writes_done : std_logic;
 	--HERE WE GO
-	signal axis_ready, axis_valid: std_logic;
+	signal axis_ready: std_logic;
+	signal axis_valid: std_logic;
 	signal axis_data: std_logic_vector(WDATA-1 downto 0);
 	--HERE WE GO NO MORE
 
@@ -181,8 +181,8 @@ begin
 	S_AXIS_TREADY	<= axis_ready;
     axis_ready    <=   MLP_SREADY;
     
-    MLP_SVALID    <= axis_valid;
     axis_valid    <=  S_AXIS_TVALID;
+	MLP_SVALID    <= axis_valid;
         
     MLP_SDATA    <= axis_data;
     axis_data <= S_AXIS_TDATA(WDATA-1 downto 0);   
