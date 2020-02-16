@@ -32,8 +32,9 @@ entity tb is
 end tb;
 
 architecture Behavioral of tb is
-    file input_test_image : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\input_images.txt";
-    file labels : text open read_mode is "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\labels.txt";
+    file input_test_image : text open read_mode is "..\..\..\..\mlp_vhdl-master\params_18bits\input_images.txt";
+    --file input_test_image : text open read_mode is ".../params_18bits/input_images.txt";
+    file labels : text open read_mode is "..\..\..\..\mlp_vhdl-master\params_18bits\labels.txt";
     file input_weights_1 : text ;
     file input_biases_1 : text ;
     file input_weights_2 : text ;
@@ -106,10 +107,10 @@ begin
             wait until falling_edge(clk_s);
             
             for k in 0 to 99 loop --100 test images
-                file_open(input_weights_1, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\weights1.txt", read_mode);
-                file_open(input_weights_2, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\weights2.txt", read_mode);
-                file_open(input_biases_1, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\biases1.txt", read_mode);
-                file_open(input_biases_2, "D:\ee36-86-2015\mlp_vhdl-master\params_18bits\biases2.txt", read_mode);
+                file_open(input_weights_1, "..\..\..\..\mlp_vhdl-master\params_18bits\weights1.txt", read_mode);
+                file_open(input_weights_2, "..\..\..\..\mlp_vhdl-master\params_18bits\weights2.txt", read_mode);
+                file_open(input_biases_1, "..\..\..\..\mlp_vhdl-master\params_18bits\biases1.txt", read_mode);
+                file_open(input_biases_2, "..\..\..\..\mlp_vhdl-master\params_18bits\biases2.txt", read_mode);
                 ------------------- STARTING MLP ------------------------------------
                 --report "Waiting for the MLP to be ready!";
                 loop

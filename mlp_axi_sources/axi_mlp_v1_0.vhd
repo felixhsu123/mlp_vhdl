@@ -260,18 +260,12 @@ axi_mlp_v1_0_S00_AXIS_inst : entity work.axi_mlp_v1_0_S00_AXIS(arch_imp)
          WDATA => WDATA)
      port map (
          clk => s00_axi_aclk,
-         reset => reset_s,
+         --reset => reset_s,
          addra => baddr_mlp2br,
          dia => bdata_mlp2br, --output from mlp is input for bram
          doa => bdata_br2mlp,
          wea => we_mlp2br,
-         ena => en_mlp2br,
-         addrb => (others => '0'),
-         dib => (others => '0'),
-         web => '0',
-         enb => '0');
-         
-    
+         ena => en_mlp2br);    
 	-- User logic ends
 
 end arch_imp;

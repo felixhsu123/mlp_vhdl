@@ -36,11 +36,10 @@ use IEEE.NUMERIC_STD.ALL;
 entity bram is
     generic (WADDR: positive := 10;
     WDATA: positive := 18); 
-    Port ( clk,  ena, enb, wea, web : in STD_LOGIC;
-           reset: in STD_LOGIC;
-           addra, addrb: in STD_LOGIC_VECTOR(WADDR-1 downto 0);
-           dia, dib: in STD_LOGIC_VECTOR(WDATA-1 downto 0);
-           doa, dob: out STD_LOGIC_VECTOR(WDATA-1 downto 0));
+    Port ( clk,  ena,  wea : in STD_LOGIC;
+           addra: in STD_LOGIC_VECTOR(WADDR-1 downto 0);
+           dia : in STD_LOGIC_VECTOR(WDATA-1 downto 0);
+           doa : out STD_LOGIC_VECTOR(WDATA-1 downto 0));
 end bram;
 
 architecture Behavioral of bram is
@@ -50,24 +49,14 @@ begin
 --Dual-Port logic port A
     process (clk) begin
         if clk'event and clk = '1' then
-            if (reset = '1') then
-                mem_s <= (others => (others => '0'));
-            else
                 if ena = '1' then
                     if wea = '1' then
                         mem_s (CONV_INTEGER (addra)) <= dia;
                     else
                        doa <= mem_s (CONV_INTEGER (addra));
                     end if;
-                end if;
-                if enb = '1' then
-                    if web = '1' then
-                        mem_s (CONV_INTEGER (addrb)) <= dib;
-                    else
-                        dob <= mem_s (CONV_INTEGER (addrb));
-                    end if;
-                end if;
-            end if;
-        end if;
+                end if;    
+          end if;
     end process;
+
 end Behavioral;
