@@ -25,7 +25,7 @@ module mlp_tb#
    logic  s00_axi_awvalid_s=0;
    logic  s00_axi_awready_s=0;
    logic [C_S00_AXI_DATA_WIDTH_c-1 : 0] s00_axi_wdata_s=0;
-   logic [(C_S00_AXI_DATA_WIDTH_c/8)-1 : 0] s00_axi_wstrb=0;
+   logic [(C_S00_AXI_DATA_WIDTH_c/8)-1 : 0] s00_axi_wstrb_s=0;
    logic  s00_axi_wvalid_s=0;
    logic  s00_axi_wready_s=0;
    logic [1 : 0] s00_axi_bresp_s=0;
@@ -75,8 +75,7 @@ module mlp_tb#
 	logic[31:0] axi_read_data; 
 
    
-   axi_mlp_v1_0 #
-   mlp_ip_inst
+   axi_mlp_v1_0 mlp_ip_inst
    (
       .s00_axi_aclk(clk_s),
       .s00_axi_aresetn(reset_s),
@@ -130,7 +129,7 @@ module mlp_tb#
       while(b2.size()!=0)
       b2.delete(0);
 
-      //EXTRACTING TEST IMAGE [y]
+      //EXTRACTING TEST IMAGES [y]
       fd = ($fopen(input_test_image, "r"));
       if(fd)
       begin
@@ -229,7 +228,7 @@ module mlp_tb#
         s00_axi_wstrb_s = 4'b0000;
         s00_axi_wdata_s = 0;
         s00_axi_wvalid_s = 0;
-        #200ns s_axi_bready_s = 0;
+        #200ns s00_axi_bready_s = 0;
    
         //START=0
         s00_axi_awaddr_s = 0;
@@ -247,7 +246,8 @@ module mlp_tb#
         s00_axi_wdata_s = 0;
         s00_axi_wvalid_s = 0;
        
-       
+       // perhaps add some delay here?
+		 
           //@(posedge interrupt);
           for(i=0; i<IMG_LEN; i++)
           begin
@@ -308,7 +308,7 @@ module mlp_tb#
              end
 
 
-			while () begin
+			forever begin
 				@(negedge clk_s);
 				s00_axi_araddr_s = 4'h4;
 				s00_axi_arvalid_s = 1;
@@ -340,7 +340,7 @@ module mlp_tb#
          
           @(negedge clk_s);
           //reading cl_num
-          s00_axi_araddr_s = 4'h12;
+          s00_axi_araddr_s = 4'hC; //12 in hex
           s00_axi_arvalid_s = 1;
           s00_axi_rready_s = 1;
           wait(s00_axi_arready_s);
@@ -348,6 +348,8 @@ module mlp_tb#
           $display("res is: %d", s00_axi_rdata_s[3:0]);
 			 //if s00_axi_rdata_s[] TODO compare with label
 			 //$display TODO
+			 
+			 
 			 @(negedge clk_s);
           s00_axi_arvalid_s = 0;
           s00_axi_rready_s = 0;
