@@ -58,8 +58,8 @@ entity mlp is
 end mlp;
 
 architecture Behavioral of mlp is
-    type state_type is (idle, wait_pixel, load_pixel, layer_state, wait_weight, load_weight,
-    wait_bias, load_bias, neuron_state, cont, cont1, find_res, find_res_1, end_state);
+    type state_type is (idle, wait_pixel, layer_state, wait_weight, load_weight,
+    wait_bias, neuron_state, cont, cont1, find_res, find_res_1);
     signal state_reg, state_next: state_type;
     signal acc_reg, acc_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
     signal acc_tmp_reg, acc_tmp_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
@@ -167,23 +167,19 @@ end process;
             when wait_pixel =>
                 sready <= '1';
                 if svalid = '1' then 
-                    state_next <= load_pixel;
-                    sdata_next <= sdata;
-                else state_next <= wait_pixel;
-                end if;
-
-            when load_pixel =>
                     baddr <= p_reg;
-                    bdata_out <= sdata_reg;
+                    bdata_out <= sdata;
                     en <= '1';
                     we <= '1';
                     p_next <= std_logic_vector( unsigned(p_reg) + 1 );
-                    if unsigned(p_next) < IMG_LEN then
-                        state_next <= wait_pixel;
-                    else
-                        layer_next <= "01";
-                        state_next <= layer_state;
-                    end if;
+					if unsigned(p_next) < IMG_LEN then
+						state_next <= wait_pixel;
+					else
+						layer_next <= "01";
+						state_next <= layer_state;
+					end if;
+                else state_next <= wait_pixel;
+                end if;
             when layer_state =>
                     --toggle <= '1';
                     neuron_next <= (others => '0');
@@ -217,35 +213,31 @@ end process;
                     end if;
             when wait_bias =>
                     sready <= '1';
-                    if svalid = '1' then 
-                        state_next <= load_bias;
-                        en<='1';
-                        we<='0';
-                        sdata_next <= sdata;
+                    if svalid = '1' then
+                        acc_tmp_next <= std_logic_vector(signed(acc_reg) + signed(sdata));
+		                if signed(acc_tmp_next) < 0 then 
+		                    acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * signed(param));
+		                    -- acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * 0.001);
+		                    acc_next <= acc_tmp2_next( ACC_WDATA + 12 - 1 downto 12);
+		                else
+		                    acc_next <= acc_tmp_next;
+		                end if;
+		                
+		                --write result in bram
+		                baddr <= std_logic_vector(to_unsigned(start_addr(to_integer(unsigned(layer_reg))) + to_integer(unsigned(neuron_reg)), baddr'length));
+		                bdata_out <= acc_next(WDATA - 1 downto 0);
+		                en <= '1';
+		                we <= '1';
+		                neuron_next <= std_logic_vector(unsigned(neuron_reg) + 1);
+		                if to_integer(unsigned(neuron_next)) < neuron_array(to_integer(unsigned(layer_reg))) then 
+		                    state_next <= neuron_state;
+		                else 
+		                    state_next <=cont;
+		                end if;
                     else
                         state_next <= wait_bias;
                     end if;
-            when load_bias =>
-                    acc_tmp_next <= std_logic_vector(signed(acc_reg) + signed(sdata_reg));
-                    if signed(acc_tmp_next) < 0 then 
-                        acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * signed(param));
-                       -- acc_tmp2_next <= std_logic_vector(signed(acc_tmp_next) * 0.001);
-                        acc_next <= acc_tmp2_next( ACC_WDATA + 12 - 1 downto 12);
-                    else
-                        acc_next <= acc_tmp_next;
-                    end if;
                     
-                    --write result in bram
-                    baddr <= std_logic_vector(to_unsigned(start_addr(to_integer(unsigned(layer_reg))) + to_integer(unsigned(neuron_reg)), baddr'length));
-                    bdata_out <= acc_next(WDATA - 1 downto 0);
-                    en <= '1';
-                    we <= '1';
-                    neuron_next <= std_logic_vector(unsigned(neuron_reg) + 1);
-                    if to_integer(unsigned(neuron_next)) < neuron_array(to_integer(unsigned(layer_reg))) then 
-                        state_next <= neuron_state;
-                    else 
-                        state_next <=cont;
-                    end if;
             when cont =>
                     layer_next  <= std_logic_vector(unsigned(layer_reg) + 1);
                     if (unsigned(layer_next) < LAYER_NUM) then state_next <=layer_state;
@@ -275,14 +267,14 @@ end process;
                   end if;
                   j_next <= std_logic_vector(unsigned(j_reg)+1);
                   if(j_next = "1010") then
-                    state_next <= end_state;
-                  else
-                    state_next <= find_res;
-             	  end if;
-            when end_state =>
                     toggle <= '1';
                     --cl_num <= res_reg;
                     state_next <= idle;
+                  else
+                    state_next <= find_res;
+             	  end if;
+         
+
         end case;        
     end process;
 
