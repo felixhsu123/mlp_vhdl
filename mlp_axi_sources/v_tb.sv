@@ -51,12 +51,13 @@ module mlp_tb#
 
    // TB VARIABLES
 
-   string input_test_image = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/input_images.txt";
-   string input_weights_1 = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/weights1.txt";
-   string input_biases_1  = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/biases1.txt";
-   string input_weights_2  = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/weights2.txt";
-   string input_biases_2   = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/biases2.txt";
-   string labels = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/labels.txt";
+    string dir = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/";
+//   string input_test_image = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/input_images.txt";
+//   string input_weights_1 = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/weights1.txt";
+//   string input_biases_1  = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/biases1.txt";
+//   string input_weights_2  = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/weights2.txt";
+//   string input_biases_2   = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/biases2.txt";
+//   string labels = "/home/student/Desktop/ee3686/mlp_vhdl-master/params_18bits/labels.txt";
 
    logic[17 : 0] y[$];
    logic[17 : 0] w1[$];
@@ -132,7 +133,7 @@ module mlp_tb#
       b2.delete(0);
 
       //EXTRACTING TEST IMAGES [y]
-      fd = ($fopen(input_test_image, "r"));
+      fd = ($fopen({dir, "input_images.txt"}, "r"));
       if(fd)
       begin
          $display("test images opened successfuly");
@@ -147,7 +148,7 @@ module mlp_tb#
       $fclose(fd);
       
         //EXTRACTING LABELS
-      fd = ($fopen(labels, "r"));
+      fd = ($fopen({dir, "labels.txt"}, "r"));
       if(fd)
       begin
          $display("labels opened successfuly");
@@ -162,7 +163,7 @@ module mlp_tb#
       $fclose(fd);
 
       //EXTRACTING WEIGHTS for 1st layers
-         fd = ($fopen(input_weights_1, "r"));
+         fd = ($fopen({dir, "weights1.txt"}, "r"));
          if(fd)
          begin
             while(!$feof(fd))
@@ -176,7 +177,7 @@ module mlp_tb#
          $fclose(fd);
 
          //EXTRACTING BIASES for 1st layers
-         fd = ($fopen(input_biases_1, "r"));
+         fd = ($fopen({dir, "biases1.txt"}, "r"));
          if(fd)
          begin
             while(!$feof(fd))
@@ -190,7 +191,7 @@ module mlp_tb#
          $fclose(fd);
 
       //EXTRACTING WEIGHTS for 2nd layers
-         fd = ($fopen(input_weights_2, "r"));
+         fd = ($fopen({dir, "weights2.txt"}, "r"));
          if(fd)
          begin
             while(!$feof(fd))
@@ -204,7 +205,7 @@ module mlp_tb#
          $fclose(fd);
 
          //EXTRACTING BIASES for 2nd layers
-         fd = ($fopen(input_biases_2, "r"));
+         fd = ($fopen({dir, "biases2.txt"}, "r"));
          if(fd)
          begin
             while(!$feof(fd))
