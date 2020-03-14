@@ -58,7 +58,7 @@ entity mlp is
 end mlp;
 
 architecture Behavioral of mlp is
-    type state_type is (idle, wait_pixel, layer_state, wait_weight,
+    type state_type is (idle, wait_pixel, layer_state, wait_weight, load_weight,
     wait_bias, neuron_state, cont, cont1, find_res, find_res_1);
     signal state_reg, state_next: state_type;
     signal acc_reg, acc_next: STD_LOGIC_VECTOR(ACC_WDATA - 1 downto 0);
@@ -196,20 +196,23 @@ end process;
             when wait_weight =>
                     sready <= '1';
                     if svalid = '1' then 
-                        product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata));
-                        acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(WDATA + ACC_WDATA/2 - 1 downto ACC_WDATA/2)));                    
-                        i_next <= std_logic_vector(unsigned(i_reg) + 1);
-                        if unsigned(i_next) < neuron_array(to_integer(unsigned(layer_reg)) - 1)
-                        then
-                            baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_next));
-                            en<='1';
-                            we<='0';
-                            state_next <= wait_weight;
-                        else 
-                            state_next <= wait_bias;
-                        end if;
+                        sdata_next <= sdata;
+                        baddr <= std_logic_vector (to_unsigned(start_addr(to_integer(unsigned(layer_reg)) - 1), 10) + unsigned(i_reg));
+                        en<='1';
+                        we<='0';
+                        state_next <= load_weight;
                     else
                         state_next <= wait_weight;
+                    end if;
+            when load_weight =>
+                    product_tmp_next <= std_logic_vector(signed(bdata_in)*signed(sdata_reg));
+                    acc_next <= std_logic_vector(signed(acc_reg) + signed(product_tmp_next(WDATA + ACC_WDATA/2 - 1 downto ACC_WDATA/2)));                    
+                    i_next <= std_logic_vector(unsigned(i_reg) + 1);
+                    if unsigned(i_next) < neuron_array(to_integer(unsigned(layer_reg)) - 1)
+                    then
+                        state_next <= wait_weight;
+                    else 
+                        state_next <= wait_bias;
                     end if;
                     
             when wait_bias =>
