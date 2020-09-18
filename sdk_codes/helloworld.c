@@ -142,9 +142,8 @@ int main()
 
 	//Start first DMA transaction
 	dma_simple_write(TxBufferPtr, MAX_PKT_LEN, XPAR_AXI_DMA_0_BASEADDR); //My function that starts a DMA transaction
-
-    	//WAIT FOR TX INTERRUPT(DATA SENT)
 	while(!tx_intr_done){};
+	tx_intr_done = 0;
 
 
 	for(layer=0; layer<2; layer++)
@@ -155,18 +154,16 @@ int main()
 			//SEND WEIGHTS
 			for(i=0; i<neuron_array[layer]; i++)
 				TxBufferPtr[i] = weight_array[layer][neuron*neuron_array[layer]+i];
-			/*Xil_DCacheFlushRange((UINTPTR)TxBufferPtr, MAX_PKT_LEN);
-			status = XAxiDma_SimpleTransfer(&AxiDma, (UINTPTR) TxBufferPtr, MAX_PKT_LEN, XAXIDMA_DMA_TO_DEVICE );
-			if(status != XST_SUCCESS)
-				return XST_FAILURE;
-			*/
-			dma_simple_write(TxBufferPtr, MAX_PKT_LEN, XPAR_AXI_DMA_0_BASEADDR);
+
+			dma_simple_write(TxBufferPtr, 4*neuron_array[layer], XPAR_AXI_DMA_0_BASEADDR);
 			while(!tx_intr_done){};
+			tx_intr_done = 0;
 
 			//SEND BIAS
 			TxBufferPtr[0] = bias_array[layer][neuron];
-			dma_simple_write(TxBufferPtr, MAX_PKT_LEN, XPAR_AXI_DMA_0_BASEADDR);
+			dma_simple_write(TxBufferPtr, 4, XPAR_AXI_DMA_0_BASEADDR);
 			while(!tx_intr_done){};
+			tx_intr_done = 0;
 
 		}
 
@@ -193,7 +190,7 @@ int main()
 // Interrupt Handler
 static void TxIntrHandler(void *Callback)
 {
-	//In every interrupt handler send the next transaction to continue the cycle
+//	//In every interrupt handler send the next transaction to continue the cycle
 	u32 IrqStatus;
 	int TimeOut, status;
 	XAxiDma *AxiDmaInst = (XAxiDma *)Callback;
@@ -208,11 +205,12 @@ static void TxIntrHandler(void *Callback)
 	Xil_Out32(XPAR_AXI_DMA_0_BASEADDR + 4, IrqStatus | 0x00007000);
 
 	/*Send a transaction*/
-	dma_simple_write(TxBufferPtr, MAX_PKT_LEN, XPAR_AXI_DMA_0_BASEADDR); //My function that starts a DMA transaction
+//	dma_simple_write(TxBufferPtr, MAX_PKT_LEN, XPAR_AXI_DMA_0_BASEADDR); //My function that starts a DMA transaction
 
 	tx_intr_done = 1;
 
 }
+
 
 // Initialize System  function
 u32 Init_Function(u32 DeviceId)
